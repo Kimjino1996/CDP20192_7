@@ -2,7 +2,7 @@ import sys, os, enum
 
 # QT5 Python Binding
 from PyQt5.QtWidgets import QApplication, QFileSystemModel, QTreeView, QWidget, QVBoxLayout, QHBoxLayout, \
-    QAbstractScrollArea
+    QAbstractScrollArea,QListView
 from PyQt5.QtWidgets import QAction, QMainWindow, QFileDialog, QGridLayout, QGroupBox, QTextEdit, QDesktopWidget, \
     QSpacerItem, QSizePolicy
 from PyQt5.QtWidgets import QInputDialog, QLineEdit
@@ -219,10 +219,14 @@ class App(QMainWindow,QWidget):  # 창의 대부분의 기능
         qhBox2 = QHBoxLayout()
         qvBox =QVBoxLayout()
 
-        self.model = QFileSystemModel()
-        self.model.setRootPath('')
+        self.treeModel = QFileSystemModel()
+        self.treeModel.setRootPath('')
+        self.listModel = QFileSystemModel()
+        self.listModel.setRootPath('')
         self.tree = QTreeView()
-        self.tree.setModel(self.model)
+        self.tree.setModel(self.treeModel)
+        self.listview = QListView()
+        self.listview.setModel(self.listModel);
 
         self.mainTextArea = QTextEdit()
         self.offsetTextArea = QTextEdit()
@@ -253,9 +257,16 @@ class App(QMainWindow,QWidget):  # 창의 대부분의 기능
         qhBox.addWidget(self.mainTextArea, 6)
         qhBox.addWidget(self.asciiTextArea, 2)
         qhBox2.addWidget(self.tree)
+        qhBox2.addWidget(self.listview)
+        self.tree.clicked.connect(self.on_clicked)
+
         qvBox.addLayout(qhBox2)
         qvBox.addLayout(qhBox)
         return qvBox
+
+    def on_clicked(self, index):
+        path = self.treeModel.fileInfo(index).absoluteFilePath()
+        self.listview.setRootIndex(self.listModel.setRootPath(path))
 
     # initUI ... Initializes the min look of the application.
     def initUI(self):
