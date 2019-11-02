@@ -26,8 +26,7 @@ class FileSelector(QFileDialog):  # FILE 입출력부
     def selectFile(self):  # FILE 선택창 설정
         options = QFileDialog.Options()  # 이 속성은 대화 상자의 모양과 느낌에 영향을 미치는 다양한 옵션을 보유함
         options != QFileDialog.DontUseNativeDialog
-        fileName, _ = QFileDialog.getOpenFileName(self, "Choose Contact Icon", "", "All Files(*))",
-                                                  options=options)
+        fileName, _ = QFileDialog.getOpenFileName(self, "Choose Contact Icon", "", "All Files(*))", options=options) #fileName에 open한 file name 받아서 저장하고 그 외에 return값은 무시
         # 사용자가 선택한 기존 파일을 반환하는 편의 정적 기능이다. 사용자가 취소를 누르면 null 문자열이 반환된다.
         # 윈도우즈 및 macOS에서 이 정적 기능은 QFileDialog가 아닌 기본 파일 대화 상자를 사용한다.
         # 1. 어느 위젯에 띄울지결정 하는포인터인것 같고, 다이어로그창 이름, 작업하려는 dir 시작점, 필터 (ex / All dir 로 걸면 dir 만 보임), option 인데
@@ -37,7 +36,7 @@ class FileSelector(QFileDialog):  # FILE 입출력부
         self.fileName = fileName
 
 
-class InputDialogue(QInputDialog):  # 대화상자에 input값 과 get 설정
+class InputDialogue(QInputDialog):  # 대화상자에 input값과 get 설정
     def __init__(self, title, text):
         super().__init__()
 
@@ -60,10 +59,7 @@ class InputDialogue(QInputDialog):  # 대화상자에 input값 과 get 설정
             self.dialogueReponse = ''
 
 
-
-
-
-class App(QMainWindow,QWidget):  # 창의 대부분의 기능
+class App(QMainWindow, QWidget):  # 창의 대부분의 기능
     def __init__(self):  # 창 기본 세팅 설정
         super().__init__()
 
@@ -84,12 +80,11 @@ class App(QMainWindow,QWidget):  # 창의 대부분의 기능
     # readFile ... Reads file data from a file in the form of bytes and generates the text for the hex-editor.
     def readFile(self, fileName):
         fileData = ''
-
         if fileName:
             with open(fileName, 'rb') as fileObj:
                 fileData = fileObj.read()
+                self.generateView(fileData)
 
-        self.generateView(fileData)
 
     # generateView ... Generates text view for hexdump likedness.
     def generateView(self, text):
@@ -134,8 +129,6 @@ class App(QMainWindow,QWidget):  # 창의 대부분의 기능
 
             offset += len(char)
 
-
-
         self.offsetTextArea.setText(offsetText)
         self.mainTextArea.setText(mainText)
         self.asciiTextArea.setText(asciiText)
@@ -169,6 +162,7 @@ class App(QMainWindow,QWidget):  # 창의 대부분의 기능
         selectionEnd = cursor.selectionEnd()
 
         mainText = self.mainTextArea.toPlainText().replace('\n', 'A')
+        #mainText = self.mainTextArea.toPlainText()
 
         totalBytes = 0
 
@@ -193,7 +187,7 @@ class App(QMainWindow,QWidget):  # 창의 대부분의 기능
         highlightCursor.setPosition(asciiEnd, QTextCursor.KeepAnchor)
 
         highlight = QTextCharFormat()
-        highlight.setBackground(Qt.red)
+        highlight.setBackground(Qt.darkCyan)
         highlightCursor.setCharFormat(highlight)
         highlightCursor.clearSelection()
 
@@ -227,7 +221,7 @@ class App(QMainWindow,QWidget):  # 창의 대부분의 기능
         self.tree.setModel(self.dirModel)
         self.list.setModel(self.fileModel)
 
-        self.tree.clicked.connect(self.on_clicked)
+        self.tree.clicked.connect(self.tree_on_clicked)
 
 
         self.mainTextArea = QTextEdit()
@@ -252,8 +246,8 @@ class App(QMainWindow,QWidget):  # 창의 대부분의 기능
         syncScrolls(self.mainTextArea, self.asciiTextArea, self.offsetTextArea)
 
         # Highlight linking. BUG-GY
-        # self.mainTextArea.selectionChanged.connect(self.highlightMain)
-        # self.asciiTextArea.selectionChanged.connect(self.highlightAscii)
+        self.mainTextArea.selectionChanged.connect(self.highlightMain)
+        self.asciiTextArea.selectionChanged.connect(self.highlightAscii)
 
         qhBox.addWidget(self.offsetTextArea, 1)
         qhBox.addWidget(self.mainTextArea, 6)
@@ -264,7 +258,7 @@ class App(QMainWindow,QWidget):  # 창의 대부분의 기능
         qvBox.addLayout(qhBox)
         return qvBox
 
-    def on_clicked(self, index):
+    def tree_on_clicked(self, index):
         path = self.dirModel.fileInfo(index).absoluteFilePath()
         self.list.setRootIndex(self.fileModel.setRootPath(path))
 
