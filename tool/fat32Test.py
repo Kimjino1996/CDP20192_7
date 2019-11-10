@@ -79,7 +79,12 @@ class FAT32:
         attr = data[11]
         is_LFN = attr & 0x0F is 0x0F
 
-        name = self.to_euc_kr(data[0:8]).rstrip()
+        if data[0]==0xE5 :
+            name='!'
+            name=name+self.to_euc_kr(data[2:7]).rstrip()
+        else :
+            name = self.to_euc_kr(data[0:8]).rstrip()
+
         ext = self.to_euc_kr(data[8:11]).rstrip()
 
         if len(ext) > 0:
@@ -92,6 +97,9 @@ class FAT32:
         entry = {'sname': name, 'attr': attr, 'cluster': cluster, 'size': size}
         if len(lfn) > 0:
             entry['name'] = lfn
+
+        if data[0] == 0xE5:
+            entry['del']='deleted'
 
         return entry
 
@@ -140,6 +148,7 @@ class FAT32:
             next_cluster = struct.unpack_from("<I", data, idx * 4)[0]
 
         return fats
+
     def define_dir(self,entry):
 
        if entry['attr']==8 :
@@ -152,18 +161,6 @@ class FAT32:
        else:
             print("file :" + entry['sname']+ '   '+str(entry['attr']))
             self.file_list.append(entry)
-
-
-
-
-    def print_all_disk(self):
-
-        print(self.generateView(self.read_sector(8192)))
-        #for i in range(2,self.END_CLUSTER):
-        #    if (self.read_cluster(i).count)<=0:
-        #        break
-        #    print(self.read_cluster(i))
-
 
 
     def generateView(self, text):
@@ -209,6 +206,14 @@ class FAT32:
             offset += len(char)
         print(mainText)
 
+    def print_all_disk(self):
+        print("Gd")
+        print(self.generateView(self.read_sector(8192)))
+        # for i in range(2,self.END_CLUSTER):
+        #    if (self.read_cluster(i).count)<=0:
+        #        break
+        #    print(self.read_cluster(i))
+
 if __name__ == '__main__':
     print("Fat32")
 
@@ -216,4 +221,9 @@ if __name__ == '__main__':
     #data = fs.read_cluster(fs.root_cluster) #root cluster 의 값을 read
     fs.print_all_disk();
     print(fs.get_files(fs.root_cluster))
-    print(FAT32.dir_list[1])
+    print(fs.get_files(FAT32.dir_list[5]['cluster']))
+
+
+    for i in FAT32.dir_list:
+        if 'del' in i:
+            print(i)
