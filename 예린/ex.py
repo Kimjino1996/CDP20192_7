@@ -23,7 +23,7 @@ class FileSelector(QFileDialog):  # FILE 입출력부
     def selectFile(self):  # FILE 선택창 설정
         options = QFileDialog.Options()  # 이 속성은 대화 상자의 모양과 느낌에 영향을 미치는 다양한 옵션을 보유함
         options != QFileDialog.DontUseNativeDialog
-        fileName, _ = QFileDialog.getOpenFileName(self, "Choose Contact Icon", "", "All Files(*))", options=options) #fileName에 open한 file name 받아서 저장하고 그 외에 return값은 무시
+        fileName, _ = QFileDialog.getOpenFileName(self, "Choose Contact Icon", "", "All Files(*))", options = options) #fileName에 open한 file name 받아서 저장하고 그 외에 return값은 무시
         # 사용자가 선택한 기존 파일을 반환하는 편의 정적 기능이다. 사용자가 취소를 누르면 null 문자열이 반환된다.
         # 윈도우즈 및 macOS에서 이 정적 기능은 QFileDialog가 아닌 기본 파일 대화 상자를 사용한다.
         # 1. 어느 위젯에 띄울지결정 하는포인터인것 같고, 다이어로그창 이름, 작업하려는 dir 시작점, 필터 (ex / All dir 로 걸면 dir 만 보임), option 인데
@@ -45,7 +45,8 @@ class InputDialogue(QInputDialog):  # 대화상자에 input값과 get 설정
 
     # initUI ... Initialize the main view of the dialogue.
     def initUI(self):
-        dialogueResponse, dialogueComplete = QInputDialog.getText(self, self.dialogueTitle, self.dialogueText, QLineEdit.Normal, '')
+        dialogueResponse, dialogueComplete = QInputDialog.getText(self, self.dialogueTitle, self.dialogueText,
+                                                                  QLineEdit.Normal, '')
         # 1. 부모위젯 포인터 , 2, 타이틀, 3,그 머고 XXX : ___ 에 XX 담당 인듯,4. 그리고 mode ( echo mode ) 같은것, 4.  받아오는 스트링
 
         if dialogueComplete and dialogueResponse:
@@ -86,6 +87,7 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
         if fileName:
             with open(fileName, 'rb') as fileObj:
                 fileData = fileObj.read()
+                
                 self.generateView(fileData)
         
         # saveFile ... Method for saving the edited hex file.
@@ -93,7 +95,7 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
     def saveFile(self):
         print('Saved!')
 
-# generateView ... Generates text view for hexdump likedness.
+    # generateView ... Generates text view for hexdump likedness.
     def generateView(self, text):
         space = ' '
         bigSpace = ' ' * 4
@@ -106,32 +108,20 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
         offsetText = ''
         mainText = ''
 
-        if ext is 'PNG':
-            byte_arr = QByteArray(text)
-            pixmap = QPixmap()
-            ok = pixmap.loadFromData(byte_arr, "PNG")
-            assert ok
+        byte_arr = QByteArray(text)
+        pixmap = QPixmap()
+        ok = pixmap.loadFromData(byte_arr, "PNG")
+        assert ok
 
-            self.asciiTextArea.setPixmap(pixmap)
+        self.asciiTextArea.setPixmap(pixmap)
 
-        elif ext is 'JPG':
-            byte_arr = QByteArray(text)
-            pixmap = QPixmap()
-            ok = pixmap.loadFromData(byte_arr, "JPG")
-            assert ok
-
-            self.asciiTextArea.setPixmap(pixmap)
-
-        else:
-            asciiText = ''
-        
 
         for chars in range(1, len(text) + 1):
             byte = text[chars - 1]
             char = chr(text[chars - 1])
 
             # Asciitext 는 오른쪽 출력부
-            if (ext not 'PNG') and (ext not 'JPG'):
+            """
                 if char is ' ':
                     asciiText += '.'
 
@@ -140,16 +130,14 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
 
                 else:
                     asciiText += char
-            
+            """
             # main text 가 중앙에 있는것
             mainText += format(byte, '0' + str(self.byteWidth) + 'x')
 
             if chars % rowLength is 0:
                 offsetText += format(offset, '08x') + '\n'
                 mainText += '\n'
-                
-                if (ext not 'PNG') and (ext not 'JPG'):
-                    asciiText += '\n'
+                #asciiText += '\n'
 
             elif chars % rowSpacing is 0:
                 mainText += space * 2
@@ -161,180 +149,8 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
 
         self.offsetTextArea.setText(offsetText)
         self.mainTextArea.setText(mainText)
+        #self.asciiTextArea.setText(pixmap)  
 
-        if (ext not 'PNG') and (ext not 'JPG'):
-            self.asciiTextArea.setText(pixmap)  
-
-    # highlightMain ... Bi-directional highlighting from main.
-    def highlightMain(self):
-        # Create and get cursors for getting and setting selections.
-        highlightCursor = QTextCursor(self.asciiTextArea.document())
-        # asciitextArea의 처음을 가르치는 커서를 구성
-        cursor = self.mainTextArea.textCursor()
-        # 커서의 위치의 사본을 따서 복사 함
-        # Clear any current selections and reset text color.
-        highlightCursor.select(QTextCursor.Document)
-        highlightCursor.setCharFormat(QTextCharFormat())
-        highlightCursor.clearSelection()
-
-        # Information about where selections and rows start.
-        selectedText = cursor.selectedText()  # The actual text selected.
-        selectionStart = cursor.selectionStart()
-        selectionEnd = cursor.selectionEnd()
-
-        mainText = self.mainTextArea.toPlainText().replace('\n', 'A')
-        #mainText = self.mainTextArea.toPlainText()
-
-        totalBytes = 0
-
-        for char in mainText[selectionStart:selectionEnd]:
-            if char is not ' ':
-                totalBytes += len(char)
-
-        asciiStart = 0
-
-        for char in mainText[:selectionStart]:
-            if char is not ' ':
-                asciiStart += len(char)
-
-        totalBytes = round(totalBytes / self.byteWidth)
-        asciiStart = round(asciiStart / self.byteWidth)
-        asciiEnd = asciiStart + totalBytes
-
-        asciiText = self.asciiTextArea.toPlainText()
-
-        # Select text and highlight it.
-        highlightCursor.setPosition(asciiStart, QTextCursor.MoveAnchor)
-        highlightCursor.setPosition(asciiEnd, QTextCursor.KeepAnchor)
-
-        highlight = QTextCharFormat()
-        highlight.setBackground(Qt.darkCyan)
-        highlightCursor.setCharFormat(highlight)
-        highlightCursor.clearSelection()
-
-    # highlightAscii ... Bi-directional highlighting from ascii.
-    def highlightAscii(self):
-        selectedText = self.asciiTextArea.textCursor().selectedText()
-        # Create and get cursors for getting and setting selections.
-        highlightCursor = QTextCursor(self.mainTextArea.document())
-        # asciitextArea의 처음을 가르치는 커서를 구성
-        cursor = self.asciiTextArea.textCursor()
-        # 커서의 위치의 사본을 따서 복사 함
-        # Clear any current selections and reset text color.
-        highlightCursor.select(QTextCursor.Document)
-        highlightCursor.setCharFormat(QTextCharFormat())
-        highlightCursor.clearSelection()
-
-        # Information about where selections and rows start.
-        selectedText = cursor.selectedText()  # The actual text selected.
-        selectionStart = cursor.selectionStart()
-        selectionEnd = cursor.selectionEnd()
-       # print(self.ascilTextArea.toPlainText());
-        asciiText = self.asciiTextArea.toPlainText().replace('\n', 'A')
-
-        totalBytes = 0
-
-        for char in asciiText[selectionStart:selectionEnd]:
-            if char is not ' ':
-                totalBytes += len(char)
-
-        MainStart = 0
-
-        for char in asciiText[:selectionStart]:
-            if char is not ' ':
-               MainStart += len(char)
-
-        totalBytes = round(totalBytes * self.byteWidth)
-        MainStart = round(MainStart * self.byteWidth)
-        MainEnd = MainStart + totalBytes
-
-        asciiText = self.asciiTextArea.toPlainText()
-
-        # Select text and highlight it.
-        highlightCursor.setPosition(MainStart, QTextCursor.MoveAnchor)
-        highlightCursor.setPosition(MainEnd, QTextCursor.KeepAnchor)
-
-        highlight = QTextCharFormat()
-        highlight.setBackground(Qt.darkCyan)
-        highlightCursor.setCharFormat(highlight)
-        highlightCursor.clearSelection()
-
-    # offsetJump ... Creates a dialogue and gets the offset to jump to and then jumps to that offset.
-
-    def offsetJump(self):  # input dialog 를 활용 하여 jump to ofsset 을 만듭니다.
-        jumpText = InputDialogue('Jump to Offset', 'Offset').dialogueReponse
-        jumpOffset = 0xF
-
-        mainText = self.mainTextArea.toPlainText()
-        mainText = mainText.strip().replace('  ', ' ')
-
-        textCursor = self.mainTextArea.textCursor()
-
-    # createMainView ... Creates the primary view and look of the application (3-text areas.)
-    def createMainView(self):
-        qhBox = QHBoxLayout()
-        qhBox2 = QHBoxLayout()
-        qvBox = QVBoxLayout()
-
-        self.dirModel = QFileSystemModel()
-        self.dirModel.setRootPath('')
-        self.fileModel = QFileSystemModel()
-        self.tree = QTreeView()
-        self.list = QListView()
-        self.tree.setModel(self.dirModel)
-        self.list.setModel(self.fileModel)
-
-        self.tree.clicked.connect(self.tree_on_clicked)
-        self.list.clicked.connect(self.list_on_clicked)
-
-        self.mainTextArea = QTextEdit()
-        self.offsetTextArea = QTextEdit()
-        if fat.ext is 'PNG' or 'JPG':
-            self.asciiTextArea = QLabel()
-        else:
-            self.asciiTextArea = QTextEdit()
-
-
-        # Initialize them all to read only.
-        self.mainTextArea.setReadOnly(True)
-        self.offsetTextArea.setReadOnly(True)
-        if (fat.ext not 'PNG') and (fat.ext not 'JPG'):
-            self.asciiTextArea.setReadOnly(True)
-        
-
-        # Create the fonts and styles to be used and then apply them.
-        font = QFont("Consolas", 11, QFont.Normal, False)
-
-        self.mainTextArea.setFont(font)
-        self.offsetTextArea.setFont(font)
-        if (fat.ext not 'PNG') and (fat.ext not 'JPG'):
-            self.asciiTextArea.setFont(font)
-
-        if (fat.ext not 'PNG') and (fat.ext not 'JPG'):
-            # Syncing scrolls.
-            filesys_tool.syncScrolls(self.mainTextArea, self.asciiTextArea, self.offsetTextArea)
-
-            # Highlight linking. BUG-GY
-            self.mainTextArea.selectionChanged.connect(self.highlightMain)
-            self.asciiTextArea.selectionChanged.connect(self.highlightAscii)
-
-        qhBox.addWidget(self.offsetTextArea, 1)
-        qhBox.addWidget(self.mainTextArea, 6)
-        qhBox.addWidget(self.asciiTextArea, 2)
-        qhBox2.addWidget(self.tree)
-        qhBox2.addWidget(self.list)
-        qvBox.addLayout(qhBox2)
-        qvBox.addLayout(qhBox)
-        return qvBox
-
-    def tree_on_clicked(self, index):
-        path = self.dirModel.fileInfo(index).absoluteFilePath()
-        self.list.setRootIndex(self.fileModel.setRootPath(path))
-
-    def list_on_clicked(self,index):
-        path = self.fileModel.fileInfo(index).absoluteFilePath()
-        #self.openbyList(self,path)
-        self.readFile(path)
 
     # initUI ... Initializes the min look of the application.
     def initUI(self):
@@ -387,7 +203,7 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
         offsetButton = QAction(QIcon(), 'Jump to Offset', self)
         offsetButton.setShortcut('Ctrl+J')
         offsetButton.setStatusTip('Jump to Offset')
-        offsetButton.triggered.connect(self.offsetJump)
+  
 
         editMenu.addAction(offsetButton)
 
@@ -400,6 +216,55 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
         # Show our masterpiece.
         self.show()
 
+    def createMainView(self):
+        qhBox = QHBoxLayout()
+        qhBox2 = QHBoxLayout()
+        qvBox = QVBoxLayout()
+
+        self.dirModel = QFileSystemModel()
+        self.dirModel.setRootPath('')
+        self.fileModel = QFileSystemModel()
+        self.tree = QTreeView()
+        self.list = QListView()
+        self.tree.setModel(self.dirModel)
+        self.list.setModel(self.fileModel)
+
+        #self.tree.clicked.connect(self.tree_on_clicked)
+        #self.list.clicked.connect(self.list_on_clicked)
+
+        self.mainTextArea = QTextEdit()
+        self.offsetTextArea = QTextEdit()
+        self.asciiTextArea = QLabel()
+
+
+        # Initialize them all to read only.
+        self.mainTextArea.setReadOnly(True)
+        self.offsetTextArea.setReadOnly(True)
+        #self.asciiTextArea.setReadOnly(True)
+        
+
+        # Create the fonts and styles to be used and then apply them.
+        font = QFont("Consolas", 11, QFont.Normal, False)
+
+        self.mainTextArea.setFont(font)
+        self.offsetTextArea.setFont(font)
+        #self.asciiTextArea.setFont(font)
+
+        # Syncing scrolls.
+        #filesys_tool.syncScrolls(self.mainTextArea, self.asciiTextArea, self.offsetTextArea)
+
+        # Highlight linking. BUG-GY
+        #self.mainTextArea.selectionChanged.connect(self.highlightMain)
+        #self.asciiTextArea.selectionChanged.connect(self.highlightAscii)
+
+        qhBox.addWidget(self.offsetTextArea, 1)
+        qhBox.addWidget(self.mainTextArea, 6)
+        qhBox.addWidget(self.asciiTextArea, 2)
+        qhBox2.addWidget(self.tree)
+        qhBox2.addWidget(self.list)
+        qvBox.addLayout(qhBox2)
+        qvBox.addLayout(qhBox)
+        return qvBox
 
 # syncScrolls ... Syncs the horizontal scrollbars of multiple qTextEdit objects. Rather clunky but it works.
 def syncScrolls(qTextObj0, qTextObj1, qTextObj2):
