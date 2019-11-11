@@ -21,7 +21,7 @@ class Exam(QWidget):
         self.btn.resize(QSize(80,25))
         self.btn.move(10,self.lbl.height() + self.txt.height())
 
-        self.btn.clicke.connect(self.createBtn) #연결해야함
+        self.btn.clicked.connect(self.createBtn) #연결해야함
 
         self.show()
 
