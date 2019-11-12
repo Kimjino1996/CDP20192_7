@@ -1,14 +1,10 @@
 import sys, os, enum, FAT32RD
 
 # QT5 Python Binding
-from PyQt5.QtWidgets import QApplication, QFileSystemModel, QTreeView, QListView, QWidget, QVBoxLayout, QHBoxLayout, \
-    QAbstractScrollArea
-from PyQt5.QtWidgets import QAction, QMainWindow, QFileDialog, QGridLayout, QGroupBox, QTextEdit, QDesktopWidget, \
-    QSpacerItem, QSizePolicy
-from PyQt5.QtWidgets import QInputDialog, QLineEdit
-from PyQt5.QtGui import QIcon, QPalette, QColor, QFont, QFontDatabase, QTextCharFormat, QTextCursor
-from PyQt5.QtCore import Qt, pyqtSlot, QObject, pyqtSignal, QDir
-
+from PyQt5.QtWidgets import *
+from PyQt5.QtGui import *
+from PyQt5.QtCore import *
+from FAT32RD import *
 
 class Mode(enum.Enum):
     READ = 0  # Purely read the hex.
@@ -88,10 +84,17 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
     # readFile ... Reads file data from a file in the form of bytes and generates the text for the hex-editor.
     def readFile(self, fileName):
         fileData = ''
+        offset = 0
         if fileName:
             with open(fileName, 'rb') as fileObj:
                 fileData = fileObj.read()
                 self.generateView(fileData)
+                """while True:
+                    fileData = fileObj.read(16)
+                    if fileData is b'':
+                        break
+                    self.generateView(fileData)
+                    offset += 16"""
         # saveFile ... Method for saving the edited hex file.
 
     def saveFile(self):
@@ -100,7 +103,6 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
     # generateView ... Generates text view for hexdump likedness.
     def generateView(self, text):
         space = ' '
-        bigSpace = ' ' * 4
 
         rowSpacing = self.rowSpacing
         rowLength = self.rowLength
@@ -116,20 +118,19 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
             char = chr(text[chars - 1])
 
             # Asciitext 는 오른쪽 출력부
-            """if char is ' ':
+            if char is ' ':
                 asciiText += '.'
 
             elif char is '\n':
                 asciiText += '!'
 
             else:
-                asciiText += char"""
+                asciiText += char
             # main text 가 중앙에 있는것
             mainText += format(byte, '02X')
 
-            if chars % rowLength is 0 and chars != 0 and chars < len(text):
-                offsetText = format(offset, '08x')
-                self.offsetTextArea.append(offsetText)
+            if chars % rowLength is 0 and chars != 0:
+                offsetText += format(offset, '08x')+'\n'
                 offset += 16
                 mainText += '\n'
                 #asciiText += '\n'
@@ -140,8 +141,14 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
             else:
                 mainText += space
 
-        self.mainTextArea.append(mainText)
-        #self.asciiTextArea.append(asciiText)
+
+        byte_arr = QByteArray(text)
+        self.asciiImageArea.loadFromData(byte_arr, "JPG")
+
+        self.offsetTextArea.setText(offsetText)
+        self.mainTextArea.setText(mainText)
+        self.asciiTextArea.setText(asciiText)
+        self.Imagelb.setPixmap(self.asciiImageArea)
 
 
     # highlightMain ... Bi-directional highlighting from main.
@@ -263,18 +270,33 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
         self.list = QListView()
         self.tree.setModel(self.dirModel)
         self.list.setModel(self.fileModel)
+        self.Imagelb = QLabel()
+        self.Imagescrollarea = QScrollArea()
+        self.Imagescrollarea.setWidgetResizable(True)
 
         self.tree.clicked.connect(self.tree_on_clicked)
         self.list.clicked.connect(self.list_on_clicked)
 
         self.mainTextArea = QTextEdit()
         self.offsetTextArea = QTextEdit()
-        self.asciiTextArea = QTextEdit()
+
+        self.tab = QTabWidget() # tab 생성
+
+        self.asciiTextArea = QTextEdit() #ascii text 출력
+        self.asciiImageArea = QPixmap() #이미지 파일의 경우 이미지 출력
+        self.TextArea = QTextEdit() #문서파일의 경우 text 출력
+
+        self.Imagescrollarea.setWidget(self.Imagelb)
+
+        self.tab.addTab(self.asciiTextArea, "ASCII")
+        self.tab.addTab(self.TextArea, "TEXT")
+        self.tab.addTab(self.Imagescrollarea, "IMAGE")
 
         # Initialize them all to read only.
         self.mainTextArea.setReadOnly(True)
         self.asciiTextArea.setReadOnly(True)
         self.offsetTextArea.setReadOnly(True)
+        self.TextArea.setReadOnly(True)
 
         # Create the fonts and styles to be used and then apply them.
         font = QFont("Consolas", 11, QFont.Normal, False)
@@ -282,19 +304,20 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
         self.mainTextArea.setFont(font)
         self.asciiTextArea.setFont(font)
         self.offsetTextArea.setFont(font)
+        self.TextArea.setFont(font)
 
         #self.offsetTextArea.setTextColor(Qt.red)
 
         # Syncing scrolls.
-        syncScrolls(self.mainTextArea, self.asciiTextArea, self.offsetTextArea)
+        syncScrolls(self.mainTextArea, self.asciiTextArea, self.offsetTextArea, self.TextArea)
 
         # Highlight linking. BUG-GY
         self.mainTextArea.selectionChanged.connect(self.highlightMain)
         self.asciiTextArea.selectionChanged.connect(self.highlightAscii)
 
         qhBox.addWidget(self.offsetTextArea, 1)
-        qhBox.addWidget(self.mainTextArea, 6)
-        qhBox.addWidget(self.asciiTextArea, 2)
+        qhBox.addWidget(self.mainTextArea, 4)
+        qhBox.addWidget(self.tab, 4)
         qhBox2.addWidget(self.tree)
         qhBox2.addWidget(self.list)
         qvBox.addLayout(qhBox2)
@@ -376,10 +399,11 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
 
 
 # syncScrolls ... Syncs the horizontal scrollbars of multiple qTextEdit objects. Rather clunky but it works.
-def syncScrolls(qTextObj0, qTextObj1, qTextObj2):
+def syncScrolls(qTextObj0, qTextObj1, qTextObj2, qTextObj3):
     scroll0 = qTextObj0.verticalScrollBar()
     scroll1 = qTextObj1.verticalScrollBar()
     scroll2 = qTextObj2.verticalScrollBar()
+    scroll3 = qTextObj3.verticalScrollBar()
 
     # There seems to be no better way of doing this at present so...
 
@@ -391,6 +415,10 @@ def syncScrolls(qTextObj0, qTextObj1, qTextObj2):
         scroll2.setValue
     )
 
+    scroll0.valueChanged.connect(
+        scroll3.setValue
+    )
+
     scroll1.valueChanged.connect(
         scroll0.setValue
     )
@@ -399,12 +427,20 @@ def syncScrolls(qTextObj0, qTextObj1, qTextObj2):
         scroll2.setValue
     )
 
+    scroll1.valueChanged.connect(
+        scroll3.setValue
+    )
+
+    scroll2.valueChanged.connect(
+        scroll0.setValue
+    )
+
     scroll2.valueChanged.connect(
         scroll1.setValue
     )
 
     scroll2.valueChanged.connect(
-        scroll0.setValue
+        scroll3.setValue
     )
 
 

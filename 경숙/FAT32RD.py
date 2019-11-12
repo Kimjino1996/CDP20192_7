@@ -1,7 +1,6 @@
 import sys
 import struct
 
-
 class FAT32:
     END_CLUSTER = 0x0fffffff
     dir_list=[]
