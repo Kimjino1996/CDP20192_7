@@ -4,7 +4,6 @@ import sys, os, enum
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
-from fat32Test import *
 
 
 class Mode(enum.Enum):
@@ -45,7 +44,8 @@ class InputDialogue(QInputDialog):  # 대화상자에 input값과 get 설정
 
     # initUI ... Initialize the main view of the dialogue.
     def initUI(self):
-        dialogueResponse, dialogueComplete = QInputDialog.getText(self, self.dialogueTitle, self.dialogueText, QLineEdit.Normal, '')
+        dialogueResponse, dialogueComplete = QInputDialog.getText(self, self.dialogueTitle, self.dialogueText,
+                                                                  QLineEdit.Normal, '')
         # 1. 부모위젯 포인터 , 2, 타이틀, 3,그 머고 XXX : ___ 에 XX 담당 인듯,4. 그리고 mode ( echo mode ) 같은것, 4.  받아오는 스트링
 
         if dialogueComplete and dialogueResponse:
@@ -74,11 +74,11 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
         self.initUI()
 
     def openFile(self):
-        
         fileSelect = FileSelector()
         fileName = fileSelect.fileName
 
         self.readFile(fileName)
+
 
     # readFile ... Reads file data from a file in the form of bytes and generates the text for the hex-editor.
     def readFile(self, fileName):
@@ -87,13 +87,12 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
             with open(fileName, 'rb') as fileObj:
                 fileData = fileObj.read()
                 self.generateView(fileData)
-        
         # saveFile ... Method for saving the edited hex file.
 
     def saveFile(self):
         print('Saved!')
 
-# generateView ... Generates text view for hexdump likedness.
+    # generateView ... Generates text view for hexdump likedness.
     def generateView(self, text):
         space = ' '
         bigSpace = ' ' * 4
@@ -105,65 +104,57 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
 
         offsetText = ''
         mainText = ''
+        asciiText = ''
+        Text = ''
 
-        if ext is 'PNG':
-            byte_arr = QByteArray(text)
-            pixmap = QPixmap()
-            ok = pixmap.loadFromData(byte_arr, "PNG")
-            assert ok
 
-            self.asciiTextArea.setPixmap(pixmap)
-
-        elif ext is 'JPG':
-            byte_arr = QByteArray(text)
-            pixmap = QPixmap()
-            ok = pixmap.loadFromData(byte_arr, "JPG")
-            assert ok
-
-            self.asciiTextArea.setPixmap(pixmap)
-
-        else:
-            asciiText = ''
-        
 
         for chars in range(1, len(text) + 1):
             byte = text[chars - 1]
             char = chr(text[chars - 1])
 
             # Asciitext 는 오른쪽 출력부
-            if (ext not 'PNG') and (ext not 'JPG'):
-                if char is ' ':
-                    asciiText += '.'
+            if char is ' ':
+                asciiText += '.'
 
-                elif char is '\n':
-                    asciiText += '!'
+            elif char is '\n':
+                asciiText += '!'
 
-                else:
-                    asciiText += char
-            
+            else:
+                asciiText += char
             # main text 가 중앙에 있는것
             mainText += format(byte, '0' + str(self.byteWidth) + 'x')
 
             if chars % rowLength is 0:
                 offsetText += format(offset, '08x') + '\n'
                 mainText += '\n'
-                
-                if (ext not 'PNG') and (ext not 'JPG'):
-                    asciiText += '\n'
+                asciiText += '\n'
 
             elif chars % rowSpacing is 0:
                 mainText += space * 2
 
             else:
                 mainText += space
-
+            
             offset += len(char)
+       
+        #Text는 한글 출력
+        #Text = asciiText.decode('cp949').encode('utf-8')
 
         self.offsetTextArea.setText(offsetText)
         self.mainTextArea.setText(mainText)
+        self.asciiTextArea.setText(asciiText)
+        self.textArea.setText(Text)
 
-        if (ext not 'PNG') and (ext not 'JPG'):
-            self.asciiTextArea.setText(pixmap)  
+        byte_arr = QByteArray(text)
+        pixmap = QPixmap()
+        image = pixmap.loadFromData(byte_arr, "JPG")
+        self.imageArea.setPixmap(pixmap)
+
+    # openFile ... Opens a file directory and returns the filename.
+
+
+
 
     # highlightMain ... Bi-directional highlighting from main.
     def highlightMain(self):
@@ -271,6 +262,7 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
         textCursor = self.mainTextArea.textCursor()
 
     # createMainView ... Creates the primary view and look of the application (3-text areas.)
+
     def createMainView(self):
         qhBox = QHBoxLayout()
         qhBox2 = QHBoxLayout()
@@ -289,38 +281,39 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
 
         self.mainTextArea = QTextEdit()
         self.offsetTextArea = QTextEdit()
-        if fat.ext is 'PNG' or 'JPG':
-            self.asciiTextArea = QLabel()
-        else:
-            self.asciiTextArea = QTextEdit()
+        self.tab = QTabWidget()
+        self.asciiTextArea = QTextEdit()
+        self.textArea = QTextEdit()
+        self.imageArea = QLabel()
 
+        self.tab.addTab(self.asciiTextArea, "ASCII")
+        self.tab.addTab(self.textArea, "TEXT")
+        self.tab.addTab(self.imageArea, "IMAGE")
 
         # Initialize them all to read only.
         self.mainTextArea.setReadOnly(True)
+        self.asciiTextArea.setReadOnly(True)
         self.offsetTextArea.setReadOnly(True)
-        if (fat.ext not 'PNG') and (fat.ext not 'JPG'):
-            self.asciiTextArea.setReadOnly(True)
-        
+        self.textArea.setReadOnly(True)
 
         # Create the fonts and styles to be used and then apply them.
         font = QFont("Consolas", 11, QFont.Normal, False)
 
         self.mainTextArea.setFont(font)
+        self.asciiTextArea.setFont(font)
         self.offsetTextArea.setFont(font)
-        if (fat.ext not 'PNG') and (fat.ext not 'JPG'):
-            self.asciiTextArea.setFont(font)
+        self.textArea.setFont(font)
 
-        if (fat.ext not 'PNG') and (fat.ext not 'JPG'):
-            # Syncing scrolls.
-            filesys_tool.syncScrolls(self.mainTextArea, self.asciiTextArea, self.offsetTextArea)
+        # Syncing scrolls.
+        syncScrolls(self.mainTextArea, self.asciiTextArea, self.offsetTextArea)
 
-            # Highlight linking. BUG-GY
-            self.mainTextArea.selectionChanged.connect(self.highlightMain)
-            self.asciiTextArea.selectionChanged.connect(self.highlightAscii)
+        # Highlight linking. BUG-GY
+        self.mainTextArea.selectionChanged.connect(self.highlightMain)
+        self.asciiTextArea.selectionChanged.connect(self.highlightAscii)
 
         qhBox.addWidget(self.offsetTextArea, 1)
-        qhBox.addWidget(self.mainTextArea, 6)
-        qhBox.addWidget(self.asciiTextArea, 2)
+        qhBox.addWidget(self.mainTextArea, 4)
+        qhBox.addWidget(self.tab, 4)
         qhBox2.addWidget(self.tree)
         qhBox2.addWidget(self.list)
         qvBox.addLayout(qhBox2)
