@@ -31,7 +31,7 @@ class Exam(QWidget):
             self.btnList.append((QPushButton(str(i+1)),self))
             self.btnList[i].resize(QSize(80,25))
             self.btnList[i].move(10,self.btnTop+(i*25))
-            self.btnList[i].show()
+            self.btnList[i].show()#??
 app = QApplication([]) #어플리케이션 객체 생성
 w= Exam()
 sys.exit(app.exec_()) #나갈때
