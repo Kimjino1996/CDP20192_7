@@ -291,7 +291,7 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
         file_list_box = QHBoxLayout()
         hexa_info_box = QHBoxLayout()
         totalBox = QVBoxLayout()
-
+        
 
 
         self.Imagelb = QLabel()
@@ -302,8 +302,8 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
         self.mainTextArea = QTextEdit()
         self.offsetTextArea = QTextEdit()
 
-        self.button_list_area = QWidget()# buttonbox 생성
-        file_list_box.addWidget(self.button_list_area);
+        self.button_list_area = QVBoxLayout()# buttonbox 생성
+        file_list_box.addLayout(self.button_list_area);
 
         self.tab = QTabWidget() # tab 생성
 
