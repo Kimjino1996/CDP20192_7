@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 
-import FAT32RD
+import fat32Test
 
 class Mode(enum.Enum):
     READ = 0  # Purely read the hex.
@@ -66,13 +66,15 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
         self.width = 1280
         self.height = 840
 
-        self.rowSpacing = 4  # How many bytes before a double space.
-        self.rowLength = 16  # 헥사 창에 얼마나 많은 byte 가 들어갈 것인지
+
         self.byteWidth = 2  # How many bits to include in a byte.
         self.mode = Mode.READ
-
         self.initUI()
+        self.read_cluster=2
+        #set clusetr
         self.readFile(sys.argv[1])
+
+
     # openFile ... Opens a file directory and returns the filename.
     def openFile(self):
         fileSelect = FileSelector()
@@ -86,8 +88,8 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
         fileData = ''
         offset = 0
 
-        self.read_FAT_DATA = FAT32RD.FAT32(fileName)
-        print(fileName)
+        self.read_FAT_DATA = fat32Test.FAT32(fileName)
+        self.read_cluster = self.read_FAT_DATA.root_cluster
         self.generateView(self.read_FAT_DATA.read_sector(8192))
 
         # saveFile ... Method for saving the edited hex file.
@@ -95,26 +97,41 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
     def saveFile(self):
         print('Saved!')
 
+
+
     # generateView ... Generates text view for hexdump likedness.
     def generateView(self, text):
-
-
         space = ' '
-
-        rowSpacing = self.rowSpacing
-        rowLength = self.rowLength
-
+        rowSpacing = 4  # How many bytes before a double space.
+        rowLength = 16  # 헥사 창에 얼마나 많은 byte 가 들어갈 것인지
         offset = 0
 
         offsetText = ''
         mainText = ''
         asciiText = ''
-        self.button_data=[]
+
+        #self.button_list_area = QVBoxLayout(self)  # buttonbox 생성
+        #print(self.button_list_area.count())
+        for i in reversed(range(self.button_list_area.count())):
+            self.button_list_area.itemAt(i).widget().setParent(None)
+            #self.button_list_area.removeItem(i)
+            #child=self.button_list_area.takeAt(i)
+            #self.button_list_area.removeItem(child)
+
+            #self.button_list_area.show()
 
 
-        self.read_FAT_DATA.get_files(self.read_FAT_DATA.root_cluster)
+        self.read_FAT_DATA.get_files(self.read_cluster)
+        button_data = []
+        print(self.read_FAT_DATA.dir_list)
+        print(self.read_FAT_DATA.file_list)
+        print()
         for i in self.read_FAT_DATA.dir_list:
-            self.button_data.append(i)
+            if 'name' in i:
+                button_data.append(i['name'])
+
+            else:
+                button_data.append(i['sname'])
 
         for chars in range(1, len(text) + 1):
             byte = text[chars - 1]
@@ -153,19 +170,17 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
         self.mainTextArea.setText(mainText)
         self.asciiTextArea.setText(asciiText)
 
-        button_list_info = self.btn_list(self.button_data)
+
+        button_list_info = self.btn_list(button_data)
 
         for i in range(len(button_list_info)):
+            #print(button_data[i])
             self.button_list_area.addWidget(button_list_info[i])
-            button_list_info[i].clicked.connect(lambda state,a=i: self.button_on_clicked(self.button_data[a]['cluster']))
+            button_list_info[i].clicked.connect(lambda state,a=i: self.button_on_clicked(button_data[a]))
 
         self.Imagelb.setPixmap(self.asciiImageArea)
 
-    def button_on_clicked(self, cluster_number):
-        self.read_FAT_DATA.get_files(cluster_number)
-        for i in self.read_FAT_DATA.dir_list:
-            self.button_data.append(i['sname'])
-
+        #self.button_list_area.update()
 
     # highlightMain ... Bi-directional highlighting from main.
     def highlightMain(self):
@@ -276,8 +291,8 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
         btnList = []
         self.btnTop = 100
         for i in range(len(name)):
-            btnList.append(self.button_create(name[i]['sname']))
-            btnList[i].resize(80, 25)
+            btnList.append(self.button_create(name[i]))
+            btnList[i].resize(QSize(80, 25))
             btnList[i].move(10, self.btnTop + (i * 25))
 
         return btnList
@@ -286,10 +301,10 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
 
         button=QPushButton(name,self)
         button.setIcon(self.style().standardIcon(getattr(QStyle,'SP_DirIcon')))
-        button.setToolTip(name)
+        button.setToolTip('This is an example button')
         button.setStyleSheet("color: white;"
                         "background-color: gray;"
-                             )
+                             );
 
         button.move(100, 70)
 
@@ -299,31 +314,29 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
     # createMainView ... Creates the primary view and look of the application (3-text areas.)
 
     def createMainView(self):
-        list_info_box = QHBoxLayout()
+        file_list_Widget = QWidget()
         hexa_info_box = QHBoxLayout()
         totalBox = QVBoxLayout()
 
-        dir_list_widget = QWidget()
-        file_list_widget = QWidget()
+        file_list_Widget.setFixedSize(600,300)
 
         self.Imagelb = QLabel()
         self.Imagescrollarea = QScrollArea()
         self.Imagescrollarea.setWidgetResizable(True)
 
+
         self.mainTextArea = QTextEdit()
         self.offsetTextArea = QTextEdit()
 
         self.button_list_area = QVBoxLayout()# buttonbox 생성
-        dir_list_widget.setLayout(self.button_list_area)
 
-        self.file_list_area = QVBoxLayout()
-        file_list_widget.setLayout(self.file_list_area)
 
         self.tab = QTabWidget() # tab 생성
 
         self.asciiTextArea = QTextEdit() #ascii text 출력
         self.asciiImageArea = QPixmap() #이미지 파일의 경우 이미지 출력
         self.TextArea = QTextEdit() #문서파일의 경우 text 출력
+
 
         self.Imagescrollarea.setWidget(self.Imagelb)
 
@@ -354,19 +367,32 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
         self.mainTextArea.selectionChanged.connect(self.highlightMain)
         self.asciiTextArea.selectionChanged.connect(self.highlightAscii)
 
+
+        file_list_Widget.setLayout(self.button_list_area);  # button list
+
         hexa_info_box.addWidget(self.offsetTextArea, 1)
         hexa_info_box.addWidget(self.mainTextArea, 4)
         hexa_info_box.addWidget(self.tab, 4)
-
-        list_info_box.addWidget(dir_list_widget, 1)
-        list_info_box.addWidget(file_list_widget, 1)
-        totalBox.addLayout(list_info_box)
+        totalBox.addWidget(file_list_Widget)
         totalBox.addLayout(hexa_info_box)
         return totalBox
 
-    def tree_on_clicked(self, index):
-        path = self.dirModel.fileInfo(index).absoluteFilePath()
-        self.list.setRootIndex(self.fileModel.setRootPath(path))
+    def button_on_clicked(self, name):
+        for i in self.read_FAT_DATA.dir_list:
+            if name==i['name']:
+                if 'del' in i:
+                    print("it's delete")
+                    break;
+                else:
+                    #print(i['cluster'])
+                    self.read_cluster=i['cluster']
+                    self.read_FAT_DATA.renew_list()
+                    self.generateView(self.read_FAT_DATA.read_sector(8192))
+
+            elif name==i['sname']:
+                self.read_cluster = i['cluster']
+                self.read_FAT_DATA.renew_list()
+                self.generateView(self.read_FAT_DATA.read_sector(8192))
 
     def list_on_clicked(self,index):
         path = self.fileModel.fileInfo(index).absoluteFilePath()

@@ -1,6 +1,7 @@
 import sys
 import struct
 
+
 class FAT32:
     END_CLUSTER = 0x0fffffff
     dir_list=[]
@@ -22,6 +23,7 @@ class FAT32:
         self.fat_size = struct.unpack_from("<I", vbr, 36)[0]
         self.root_cluster = struct.unpack_from("<I", vbr, 44)[0]
         self.first_data_sector = self.fat_size * self.number_of_fats + self.reserved_sectors
+
 
     def read_sector(self, offset, count=1):
         self.fd.seek(offset * self.bps)
@@ -78,7 +80,12 @@ class FAT32:
         attr = data[11]
         is_LFN = attr & 0x0F is 0x0F
 
-        name = self.to_euc_kr(data[0:8]).rstrip()
+        if data[0]==0xE5 :
+            name='!'
+            name=name+self.to_euc_kr(data[2:7]).rstrip()
+        else :
+            name = self.to_euc_kr(data[0:8]).rstrip()
+
         ext = self.to_euc_kr(data[8:11]).rstrip()
 
         if len(ext) > 0:
@@ -91,6 +98,9 @@ class FAT32:
         entry = {'sname': name, 'attr': attr, 'cluster': cluster, 'size': size}
         if len(lfn) > 0:
             entry['name'] = lfn
+
+        if data[0] == 0xE5:
+            entry['del']='deleted'
 
         return entry
 
@@ -143,31 +153,15 @@ class FAT32:
     def define_dir(self,entry):
 
        if entry['attr']==8 :
-           print("volume :")
-           print(entry)
+           print("volume :" + entry['sname'] + '    ' + str(entry['attr']))
 
        if entry['attr']==16 or entry['attr']==22 :
-            print("dir :")
-            print(entry)
+           # print("dir :" + entry['sname'] + '    ' + str(entry['attr']))
             self.dir_list.append(entry)
 
        else:
-            print("file :")
-            print(entry)
+            #print("file :" + entry['sname']+ '   '+str(entry['attr']))
             self.file_list.append(entry)
-
-
-
-
-    def print_all_disk(self):
-
-        #print(self.generateView(self.read_sector(8192)))
-        print(self.generateView(self.read_sector(self.first_data_sector)))
-        #for i in range(2,self.END_CLUSTER):
-        #    if (self.read_cluster(i).count)<=0:
-        #        break
-        #    print(self.read_cluster(i))
-
 
 
     def generateView(self, text):
@@ -197,7 +191,7 @@ class FAT32:
             else:
                 asciiText += char
             # main text 가 중앙에 있는것
-            mainText += format(byte, '02X')
+            mainText += format(byte, '0' + str(byteWidth) + 'x')
 
             if chars % rowLength is 0:
                 offsetText += format(offset, '08x') + '\n'
@@ -213,13 +207,30 @@ class FAT32:
             offset += len(char)
         print(mainText)
 
+    def renew_list(self):
+        self.dir_list=[]
+        self.file_list=[]
+
+
 if __name__ == '__main__':
     print("Fat32")
 
     fs = FAT32(sys.argv[1])
     #data = fs.read_cluster(fs.root_cluster) #root cluster 의 값을 read
-    fs.print_all_disk();
-    print(fs.get_files(fs.root_cluster))
+    #fs.print_all_disk();
 
-    for i in range(len(FAT32.dir_list)):
-        print(FAT32.dir_list[i])
+    fs.get_files(fs.root_cluster)
+    print(fs.dir_list)
+
+    #for i in fs.dir_list:
+    #    print(i['sname'])
+
+    #print(fs.get_files(FAT32.dir_list[5]['cluster']))
+    fs.renew_list()
+    fs.get_files(7)
+    for i in fs.dir_list:
+        print(i['sname'])
+
+   # for i in FAT32.dir_list:
+    #    if 'del' in i:
+    #        print(i)
