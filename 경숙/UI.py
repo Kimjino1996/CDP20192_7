@@ -136,6 +136,7 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
             else:
                 file_button_data.append(i['sname'])
 
+
         for chars in range(1, len(text) + 1):
             byte = text[chars - 1]
             char = chr(text[chars - 1])
@@ -275,12 +276,17 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
             if (name==i['sname']) or ('name' in i and name ==i['name']) :
                 if 'del' in i:
                     print("it's delete")
+                    i['real_ext'] = 'Deleted Directory'
+                    extText = 'Directory Entry Extension: ' + i['ext'] + '\nFile Extension: ' + i['real_ext']
+                    self.extArea.setText(extText)
                     break;
                 else:
                     self.read_cluster=i['cluster']
                     if self.read_cluster == 0:
                        self.read_cluster=2
                     #self.read_FAT_DATA.renew_list()
+                    extText = 'Directory Entry Extension: ' + i['ext'] + '\nFile Extension: ' + i['real_ext']
+                    self.extArea.setText(extText)
                     self.generateView(self.read_FAT_DATA.get_content(self.read_cluster), self.read_cluster)
 
     def file_button_on_clicked(self, name):
@@ -288,19 +294,25 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
             if (name==i['sname']) or ('name' in i and name ==i['name']) :
                 if 'del' in i:
                     print("it's delete")
+                    i['real_ext']='Deleted File'
+                    extText = 'Directory Entry Extension: ' + i['ext'] + '\nFile Extension: ' + i['real_ext']
+                    self.extArea.setText(extText)
                     break;
                 if 'size'==0 in i: #파일 목록에서 디렉토리일때
                     self.read_cluster = i['cluster']
                     if self.read_cluster == 0:
                         self.read_cluster = 2
                     # self.read_FAT_DATA.renew_list()
-                    self.generateView(self.read_FAT_DATA.get_content(self.read_cluster), self.read_cluster)
+
                 else:
                     self.read_cluster=i['cluster']
                     if self.read_cluster == 0:
                       self.read_cluster=2
                    # self.read_FAT_DATA.renew_list()
-                    self.file_generateView(self.read_FAT_DATA.get_content(self.read_cluster), self.read_cluster)
+
+                extText = 'Directory Entry Extension: ' + i['ext'] + '\nFile Extension: ' + i['real_ext']
+                self.extArea.setText(extText)
+                self.file_generateView(self.read_FAT_DATA.get_content(self.read_cluster), self.read_cluster)
 
     # highlightMain ... Bi-directional highlighting from main.
     def highlightMain(self):
@@ -433,11 +445,13 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
         self.mainTextArea = QTextEdit()
         self.offsetTextArea = QTextEdit()
 
+
         self.tab = QTabWidget()  # tab 생성
 
         self.asciiTextArea = QTextEdit()  # ascii text 출력
         self.asciiImageArea = QPixmap()  # 이미지 파일의 경우 이미지 출력
         self.TextArea = QTextEdit()  # 문서파일의 경우 text 출력
+        self.extArea = QTextEdit() # directory entry에 저장된 확장자와 실제 파일의 확장자를 출력
 
         self.Imagelb.setStyleSheet("background-color:black;")
         self.Imagescrollarea.setWidget(self.Imagelb)
@@ -449,16 +463,19 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
         self.asciiTextArea.setFont(font)
         self.offsetTextArea.setFont(font)
         self.TextArea.setFont(font)
+        self.extArea.setFont(font)
 
         self.tab.addTab(self.asciiTextArea, "ASCII")
         self.tab.addTab(self.TextArea, "TEXT")
         self.tab.addTab(self.Imagescrollarea, "IMAGE")
+        self.tab.addTab(self.extArea, "EXT")
 
         # Initialize them all to read only.
         self.mainTextArea.setReadOnly(True)
         self.asciiTextArea.setReadOnly(True)
         self.offsetTextArea.setReadOnly(True)
         self.TextArea.setReadOnly(True)
+        self.extArea.setReadOnly(True)
 
         # Syncing scrolls.
         syncScrolls(self.mainTextArea, self.asciiTextArea, self.offsetTextArea, self.TextArea)

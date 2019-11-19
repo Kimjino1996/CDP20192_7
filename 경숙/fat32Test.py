@@ -92,7 +92,6 @@ class FAT32:
 
         ext = self.to_euc_kr(data[8:11]).rstrip()
 
-
         if len(ext) > 0:
             name = name + "." + ext
 
@@ -187,7 +186,8 @@ class FAT32:
            print("volume :" + entry['sname'] + '    ' + str(entry['attr']))"""
 
        if entry['attr'] == 8 or entry['attr'] == 16 or entry['attr'] == 22:
-            self.dir_list.append(entry)
+           entry['ext']='Directory'
+           self.dir_list.append(entry)
 
        else:
             self.file_list.append(entry)
