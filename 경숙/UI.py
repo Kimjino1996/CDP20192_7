@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 
-import FAT32RD
+import fat32Test
 
 class Mode(enum.Enum):
     READ = 0  # Purely read the hex.
@@ -66,55 +66,75 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
         self.width = 1280
         self.height = 840
 
-        self.rowSpacing = 4  # How many bytes before a double space.
-        self.rowLength = 16  # 헥사 창에 얼마나 많은 byte 가 들어갈 것인지
+
         self.byteWidth = 2  # How many bits to include in a byte.
         self.mode = Mode.READ
-
         self.initUI()
-        self.readFile(sys.argv[1])
+        self.read_cluster=2
+
+
     # openFile ... Opens a file directory and returns the filename.
     def openFile(self):
         fileSelect = FileSelector()
         fileName = fileSelect.fileName
 
-        self.readFile(fileName)
+        if fileName != '':
+            self.readFile(fileName)
 
 
     # readFile ... Reads file data from a file in the form of bytes and generates the text for the hex-editor.
     def readFile(self, fileName):
-        fileData = ''
-        offset = 0
+        self.read_FAT_DATA = fat32Test.FAT32(fileName)
+        self.read_cluster = self.read_FAT_DATA.root_cluster
+        self.generateView(self.read_FAT_DATA.read_sector(0, 32), 0) # 처음 시작했을 때는 vbr 영역만큼(32 sector) 읽는다
 
-        self.read_FAT_DATA = FAT32RD.FAT32(fileName)
-        print(fileName)
-        self.generateView(self.read_FAT_DATA.read_sector(8192))
-
-        # saveFile ... Method for saving the edited hex file.
 
     def saveFile(self):
         print('Saved!')
 
+
     # generateView ... Generates text view for hexdump likedness.
-    def generateView(self, text):
-
-
+    def generateView(self, text,cluster):
+        self.read_FAT_DATA.renew_list()
         space = ' '
+        rowSpacing = 4  # How many bytes before a double space.
+        rowLength = 16  # 헥사 창에 얼마나 많은 byte 가 들어갈 것인지
 
-        rowSpacing = self.rowSpacing
-        rowLength = self.rowLength
+        if cluster == 0:
+            offset = 0
 
-        offset = 0
+        else:
+            offset = ((cluster - 2) * self.read_FAT_DATA.spc + self.read_FAT_DATA.first_data_sector) * 512
 
         offsetText = ''
         mainText = ''
         asciiText = ''
-        self.button_data=[]
 
+        for i in reversed(range(self.button_list_area.count())):
+            self.button_list_area.itemAt(i).widget().setParent(None)
+        for i in reversed(range(self.file_button_list_area.count())):
+            self.file_button_list_area.itemAt(i).widget().setParent(None)
 
-        self.read_FAT_DATA.get_files(self.read_FAT_DATA.root_cluster)
+        self.read_FAT_DATA.get_files(self.read_cluster)
+
+        button_data = []
+        file_button_data = []
+
+        print(self.read_FAT_DATA.dir_list)
+        print(self.read_FAT_DATA.file_list)
+
         for i in self.read_FAT_DATA.dir_list:
-            self.button_data.append(i)
+            if 'name' in i:
+                button_data.append(i['name'])
+
+            else:
+                button_data.append(i['sname'])
+
+        for i in self.read_FAT_DATA.file_list:
+            if 'name' in i:
+                file_button_data.append(i['name'])
+            else:
+                file_button_data.append(i['sname'])
 
         for chars in range(1, len(text) + 1):
             byte = text[chars - 1]
@@ -144,28 +164,143 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
             else:
                 mainText += space
 
-
-        byte_arr = QByteArray(text)
-
-        self.asciiImageArea.loadFromData(byte_arr, "JPG")
+        for i in self.read_FAT_DATA.file_list:
+            if i['cluster'] == cluster:
+                byte_arr = QByteArray(text)
+                self.asciiImageArea.loadFromData(byte_arr, i['ext'])
 
         self.offsetTextArea.setText(offsetText)
         self.mainTextArea.setText(mainText)
         self.asciiTextArea.setText(asciiText)
 
-        button_list_info = self.btn_list(self.button_data)
+
+        button_list_info = self.btn_list(button_data, 0)
+        file_button_list_info=self.btn_list(file_button_data, 1)
 
         for i in range(len(button_list_info)):
             self.button_list_area.addWidget(button_list_info[i])
-            button_list_info[i].clicked.connect(lambda state,a=i: self.button_on_clicked(self.button_data[a]['cluster']))
+            button_list_info[i].clicked.connect(lambda state,a=i: self.button_on_clicked(button_data[a]))
 
+        for i in range(len(file_button_list_info)):
+            self.file_button_list_area.addWidget(file_button_list_info[i])
+            file_button_list_info[i].clicked.connect(lambda state, a=i: self.file_button_on_clicked(file_button_data[a]))
+
+        self.button_list_area.setAlignment(Qt.AlignTop)
+        self.file_button_list_area.setAlignment(Qt.AlignTop)
         self.Imagelb.setPixmap(self.asciiImageArea)
 
-    def button_on_clicked(self, cluster_number):
-        self.read_FAT_DATA.get_files(cluster_number)
-        for i in self.read_FAT_DATA.dir_list:
-            self.button_data.append(i['sname'])
+    def file_generateView(self, text,cluster):
+        space = ' '
 
+        rowSpacing = 4
+        rowLength = 16
+
+        offset = ((cluster - 2) * self.read_FAT_DATA.spc + self.read_FAT_DATA.first_data_sector) *512
+        offsetText = ''
+        mainText = ''
+        asciiText = ''
+
+        for chars in range(1, len(text) + 1):
+            byte = text[chars - 1]
+            char = chr(text[chars - 1])
+
+            # Asciitext 는 오른쪽 출력부
+            if char is ' ':
+                asciiText += '.'
+
+            elif char is '\n' or char is '\r':
+                asciiText += '.'
+
+            else:
+                asciiText += char
+            # main text 가 중앙에 있는것
+            mainText += format(byte, '02X')
+
+            if chars % rowLength is 0 and chars != 0:
+                offsetText += format(offset, '08x')+'\n'
+                offset += 16
+                mainText += '\n'
+                asciiText += '\n'
+
+            elif chars % rowSpacing is 0:
+                mainText += space * 2
+
+            else:
+                mainText += space
+        #print(mainText)
+
+        for i in self.read_FAT_DATA.file_list:
+            if i['cluster'] == cluster:
+                byte_arr = QByteArray(text)
+                self.asciiImageArea.loadFromData(byte_arr, i['ext'])
+
+        #print(text.decode('utf-8'))
+
+        self.offsetTextArea.setText(offsetText)
+        self.mainTextArea.setText(mainText)
+        self.asciiTextArea.setText(asciiText)
+
+        self.button_list_area.setAlignment(Qt.AlignTop)
+        self.file_button_list_area.setAlignment(Qt.AlignTop)
+        self.Imagelb.setPixmap(self.asciiImageArea)
+
+    def btn_list(self, name, type):
+        btnList = []
+        self.btnTop = 100
+
+        for i in range(len(name)):
+            btnList.append(self.button_create(name[i], type))
+            btnList[i].resize(QSize(80, 25))
+            btnList[i].move(10, self.btnTop)
+
+        return btnList
+
+    def button_create(self, name, type):
+        button = QPushButton(name, self)
+
+        if type == 0: #if directory
+            button.setIcon(self.style().standardIcon(getattr(QStyle, 'SP_DirIcon')))
+
+        elif type == 1: #if file
+            button.setIcon(self.style().standardIcon(getattr(QStyle, 'SP_FileIcon')))
+
+        button.setToolTip(name)
+        button.setFixedSize(230,20)
+        button.setStyleSheet("QPushButton { text-align: left; }")
+
+        return button
+
+    def button_on_clicked(self, name):
+        for i in self.read_FAT_DATA.dir_list:
+            if (name==i['sname']) or ('name' in i and name ==i['name']) :
+                if 'del' in i:
+                    print("it's delete")
+                    break;
+                else:
+                    self.read_cluster=i['cluster']
+                    if self.read_cluster == 0:
+                       self.read_cluster=2
+                    #self.read_FAT_DATA.renew_list()
+                    self.generateView(self.read_FAT_DATA.get_content(self.read_cluster), self.read_cluster)
+
+    def file_button_on_clicked(self, name):
+        for i in self.read_FAT_DATA.file_list:
+            if (name==i['sname']) or ('name' in i and name ==i['name']) :
+                if 'del' in i:
+                    print("it's delete")
+                    break;
+                if 'size'==0 in i: #파일 목록에서 디렉토리일때
+                    self.read_cluster = i['cluster']
+                    if self.read_cluster == 0:
+                        self.read_cluster = 2
+                    # self.read_FAT_DATA.renew_list()
+                    self.generateView(self.read_FAT_DATA.get_content(self.read_cluster), self.read_cluster)
+                else:
+                    self.read_cluster=i['cluster']
+                    if self.read_cluster == 0:
+                      self.read_cluster=2
+                   # self.read_FAT_DATA.renew_list()
+                    self.file_generateView(self.read_FAT_DATA.get_content(self.read_cluster), self.read_cluster)
 
     # highlightMain ... Bi-directional highlighting from main.
     def highlightMain(self):
@@ -264,68 +399,56 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
 
     def offsetJump(self):  # input dialog 를 활용 하여 jump to ofsset 을 만듭니다.
         jumpText = InputDialogue('Jump to Offset', 'Offset').dialogueReponse
-        jumpOffset = 0xF
 
-        mainText = self.mainTextArea.toPlainText()
-        mainText = mainText.strip().replace('  ', ' ')
-
-        textCursor = self.mainTextArea.textCursor()
-
-
-    def btn_list(self,name):
-        btnList = []
-        self.btnTop = 100
-        for i in range(len(name)):
-            btnList.append(self.button_create(name[i]['sname']))
-            btnList[i].resize(80, 25)
-            btnList[i].move(10, self.btnTop + (i * 25))
-
-        return btnList
-
-    def button_create(self,name):
-
-        button=QPushButton(name,self)
-        button.setIcon(self.style().standardIcon(getattr(QStyle,'SP_DirIcon')))
-        button.setToolTip(name)
-        button.setStyleSheet("color: white;"
-                        "background-color: gray;"
-                             )
-
-        button.move(100, 70)
-
-        return button
+        if jumpText != '':
+            jumpOffset = int(int(jumpText) / 512)
+            print(jumpOffset)
+            self.generateView(self.read_FAT_DATA.read_sector(jumpOffset), jumpOffset)
 
 
     # createMainView ... Creates the primary view and look of the application (3-text areas.)
-
     def createMainView(self):
-        list_info_box = QHBoxLayout()
+        file_list_Widget = QWidget()
+        file_list = QWidget()
+        Button_area = QHBoxLayout()
+        file_list_Widget.setStyleSheet("background-color:black;")
+        file_list.setStyleSheet("background-color:black;")
+
         hexa_info_box = QHBoxLayout()
         totalBox = QVBoxLayout()
 
-        dir_list_widget = QWidget()
-        file_list_widget = QWidget()
+        # file list button 출력 widget
+        file_list_Widget.setFixedSize(600, 300)
 
+        # file list button 붙일 button box
+        self.button_list_area = QVBoxLayout()  # buttonbox 생성
+        self.file_button_list_area = QVBoxLayout()  # file쪽
+
+        # Image 출력할 영역
         self.Imagelb = QLabel()
         self.Imagescrollarea = QScrollArea()
         self.Imagescrollarea.setWidgetResizable(True)
 
+        # hexa, offset 출력할 영역
         self.mainTextArea = QTextEdit()
         self.offsetTextArea = QTextEdit()
 
-        self.button_list_area = QVBoxLayout()# buttonbox 생성
-        dir_list_widget.setLayout(self.button_list_area)
+        self.tab = QTabWidget()  # tab 생성
 
-        self.file_list_area = QVBoxLayout()
-        file_list_widget.setLayout(self.file_list_area)
+        self.asciiTextArea = QTextEdit()  # ascii text 출력
+        self.asciiImageArea = QPixmap()  # 이미지 파일의 경우 이미지 출력
+        self.TextArea = QTextEdit()  # 문서파일의 경우 text 출력
 
-        self.tab = QTabWidget() # tab 생성
-
-        self.asciiTextArea = QTextEdit() #ascii text 출력
-        self.asciiImageArea = QPixmap() #이미지 파일의 경우 이미지 출력
-        self.TextArea = QTextEdit() #문서파일의 경우 text 출력
-
+        self.Imagelb.setStyleSheet("background-color:black;")
         self.Imagescrollarea.setWidget(self.Imagelb)
+
+        # Create the fonts and styles to be used and then apply them.
+        font = QFont("Consolas", 11, QFont.Normal, False)
+
+        self.mainTextArea.setFont(font)
+        self.asciiTextArea.setFont(font)
+        self.offsetTextArea.setFont(font)
+        self.TextArea.setFont(font)
 
         self.tab.addTab(self.asciiTextArea, "ASCII")
         self.tab.addTab(self.TextArea, "TEXT")
@@ -337,16 +460,6 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
         self.offsetTextArea.setReadOnly(True)
         self.TextArea.setReadOnly(True)
 
-        # Create the fonts and styles to be used and then apply them.
-        font = QFont("Consolas", 11, QFont.Normal, False)
-
-        self.mainTextArea.setFont(font)
-        self.asciiTextArea.setFont(font)
-        self.offsetTextArea.setFont(font)
-        self.TextArea.setFont(font)
-
-        #self.offsetTextArea.setTextColor(Qt.red)
-
         # Syncing scrolls.
         syncScrolls(self.mainTextArea, self.asciiTextArea, self.offsetTextArea, self.TextArea)
 
@@ -354,23 +467,18 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
         self.mainTextArea.selectionChanged.connect(self.highlightMain)
         self.asciiTextArea.selectionChanged.connect(self.highlightAscii)
 
+        file_list_Widget.setLayout(self.button_list_area);  # button list
+        file_list.setLayout(self.file_button_list_area);
         hexa_info_box.addWidget(self.offsetTextArea, 1)
         hexa_info_box.addWidget(self.mainTextArea, 4)
         hexa_info_box.addWidget(self.tab, 4)
 
-        list_info_box.addWidget(dir_list_widget, 1)
-        list_info_box.addWidget(file_list_widget, 1)
-        totalBox.addLayout(list_info_box)
+        Button_area.addWidget(file_list_Widget)
+        Button_area.addWidget(file_list)
+        totalBox.addLayout(Button_area)
         totalBox.addLayout(hexa_info_box)
         return totalBox
 
-    def tree_on_clicked(self, index):
-        path = self.dirModel.fileInfo(index).absoluteFilePath()
-        self.list.setRootIndex(self.fileModel.setRootPath(path))
-
-    def list_on_clicked(self,index):
-        path = self.fileModel.fileInfo(index).absoluteFilePath()
-        #self.openbyList(self,path)
 
     # initUI ... Initializes the min look of the application.
     def initUI(self):
@@ -489,10 +597,9 @@ def setStyle(qApp):
     qApp.setStyle("Fusion")
 
     dark_palette = QPalette()
-
     dark_palette.setColor(QPalette.Window, QColor(53, 53, 53))
     dark_palette.setColor(QPalette.WindowText, Qt.white)
-    dark_palette.setColor(QPalette.Base, QColor(25, 25, 25))
+    dark_palette.setColor(QPalette.Base, Qt.black)
     dark_palette.setColor(QPalette.AlternateBase, QColor(53, 53, 53))
     dark_palette.setColor(QPalette.ToolTipBase, Qt.white)
     dark_palette.setColor(QPalette.ToolTipText, Qt.white)
@@ -503,6 +610,7 @@ def setStyle(qApp):
     dark_palette.setColor(QPalette.Link, QColor(42, 130, 218))
     dark_palette.setColor(QPalette.Highlight, QColor(42, 130, 218))
     dark_palette.setColor(QPalette.HighlightedText, Qt.black)
+
 
     qApp.setPalette(dark_palette)
 

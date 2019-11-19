@@ -24,6 +24,9 @@ class FAT32:
         self.root_cluster = struct.unpack_from("<I", vbr, 44)[0]
         self.first_data_sector = self.fat_size * self.number_of_fats + self.reserved_sectors
 
+    def read_byte(self, offset, count=1):
+        self.fd.seek(offset)
+        return self.fd.read(count)
 
     def read_sector(self, offset, count=1):
         self.fd.seek(offset * self.bps)
@@ -83,10 +86,12 @@ class FAT32:
         if data[0]==0xE5 :
             name='!'
             name=name+self.to_euc_kr(data[2:7]).rstrip()
+
         else :
             name = self.to_euc_kr(data[0:8]).rstrip()
 
         ext = self.to_euc_kr(data[8:11]).rstrip()
+
 
         if len(ext) > 0:
             name = name + "." + ext
@@ -95,7 +100,29 @@ class FAT32:
         lowcluster = struct.unpack_from("<H", data, 26)[0]
         cluster = highcluster << 16 | lowcluster
         size = struct.unpack_from("<I", data, 28)[0]
-        entry = {'sname': name, 'attr': attr, 'cluster': cluster, 'size': size}
+
+        real_ext_byte = self.get_real_ext(cluster)
+        real_ext_high = real_ext_byte[0:4]
+        real_ext=''
+
+        if real_ext_high == b'PK\x03\x04':
+            real_ext = 'ZIP'
+
+        elif real_ext_high == b'\xFF\xD8\xFF\xE0':
+            real_ext = 'JPG'
+
+        elif real_ext_byte == b'\x89\x50\x4E\x47\x0D\x0A\x1A\x0A':
+            real_ext = 'PNG'
+
+        elif real_ext_high == b'\x25\x50\x44\x46':
+            real_ext = 'PDF'
+
+        elif real_ext_byte == b'\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1':
+            real_ext = 'HWP'
+
+        entry = {'sname': name, 'attr': attr, 'cluster': cluster, 'size': size, 'ext': ext, 'real_ext': real_ext}
+
+
         if len(lfn) > 0:
             entry['name'] = lfn
 
@@ -103,6 +130,10 @@ class FAT32:
             entry['del']='deleted'
 
         return entry
+
+    def get_real_ext(self, cluster):
+        real_ext = self.read_byte(((cluster-2)*2+self.first_data_sector)*512, 8)
+        return real_ext
 
     def get_content(self, cluster):
         fats = self.get_fats_by_start_cluster(cluster)
@@ -152,60 +183,15 @@ class FAT32:
 
     def define_dir(self,entry):
 
-       if entry['attr']==8 :
-           print("volume :" + entry['sname'] + '    ' + str(entry['attr']))
+       """if entry['attr']==8 :
+           print("volume :" + entry['sname'] + '    ' + str(entry['attr']))"""
 
-       if entry['attr']==16 or entry['attr']==22 :
-           # print("dir :" + entry['sname'] + '    ' + str(entry['attr']))
+       if entry['attr'] == 8 or entry['attr'] == 16 or entry['attr'] == 22:
             self.dir_list.append(entry)
 
        else:
-            #print("file :" + entry['sname']+ '   '+str(entry['attr']))
             self.file_list.append(entry)
 
-
-    def generateView(self, text):
-        space = ' '
-
-        rowSpacing = 4
-        rowLength = 16
-        byteWidth=4
-
-        offset = 0
-
-        offsetText = ''
-        mainText = ''
-        asciiText = ''
-
-        for chars in range(1, len(text) + 1):
-            byte = text[chars - 1]
-            char = chr(text[chars - 1])
-
-            # Asciitext 는 오른쪽 출력부
-            if char is ' ':
-                asciiText += '.'
-
-            elif char is '\n':
-                asciiText += '!'
-
-            else:
-                asciiText += char
-            # main text 가 중앙에 있는것
-            mainText += format(byte, '0' + str(byteWidth) + 'x')
-
-            if chars % rowLength is 0:
-                offsetText += format(offset, '08x') + '\n'
-                mainText += '\n'
-                asciiText += '\n'
-
-            elif chars % rowSpacing is 0:
-                mainText += space * 2
-
-            else:
-                mainText += space
-
-            offset += len(char)
-        print(mainText)
 
     def renew_list(self):
         self.dir_list=[]
@@ -216,21 +202,12 @@ if __name__ == '__main__':
     print("Fat32")
 
     fs = FAT32(sys.argv[1])
-    #data = fs.read_cluster(fs.root_cluster) #root cluster 의 값을 read
-    #fs.print_all_disk();
 
+    #print(fs.root_cluster)
     fs.get_files(fs.root_cluster)
-    print(fs.dir_list)
+    print(fs.file_list)
 
-    #for i in fs.dir_list:
-    #    print(i['sname'])
-
-    #print(fs.get_files(FAT32.dir_list[5]['cluster']))
-    fs.renew_list()
+    """fs.renew_list()
     fs.get_files(7)
     for i in fs.dir_list:
-        print(i['sname'])
-
-   # for i in FAT32.dir_list:
-    #    if 'del' in i:
-    #        print(i)
+        print(i['sname'])"""
