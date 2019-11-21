@@ -275,18 +275,44 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
         for i in self.read_FAT_DATA.dir_list:
             if (name==i['sname']) or ('name' in i and name ==i['name']) :
                 if 'del' in i:
-                    print("it's delete")
                     i['real_ext'] = 'Deleted Directory'
-                    extText = 'Directory Entry Extension: ' + i['ext'] + '\nFile Extension: ' + i['real_ext']
-                    self.extArea.setText(extText)
+                    create_string = str(((i['create_date'] & 65024) >> 9) + 1980) + '/' + str(
+                            (i['create_date'] & 480) >> 5) + '/' + str(i['create_date'] & 31) + ' - ' + str(
+                                            (i['create_time'] & 63488) >> 11) + ':' + str(
+                                            (i['create_time'] & 2016) >> 5) + ':' + str(
+                                            (i['create_time'] & 31) * 2)
+
+                    write_string = str(((i['write_date'] & 65024) >> 9) + 1980) + '/' + str(
+                            (i['write_date'] & 480) >> 5) + '/' + str(i['write_date'] & 31) + ' - ' + str(
+                                           (i['write_time'] & 63488) >> 11) + ':' + str(
+                                           (i['write_time'] & 2016) >> 5) + ':' + str(
+                                           (i['write_time'] & 31) * 2)
+
+                    infoText = 'File Extension: ' + i['ext'] + '\nFile Signature: ' + i[
+                        'real_ext'] + '\ncreate: ' + create_string + '\nwrite: ' + write_string
+                    self.infoArea.setText(infoText)
                     break;
                 else:
                     self.read_cluster=i['cluster']
                     if self.read_cluster == 0:
                        self.read_cluster=2
                     #self.read_FAT_DATA.renew_list()
-                    extText = 'Directory Entry Extension: ' + i['ext'] + '\nFile Extension: ' + i['real_ext']
-                    self.extArea.setText(extText)
+                    i['real_ext'] = 'Directory'
+                    create_string = str(((i['create_date'] & 65024) >> 9) + 1980) + '/' + str(
+                        (i['create_date'] & 480) >> 5) + '/' + str(i['create_date'] & 31) + ' - ' + str(
+                        (i['create_time'] & 63488) >> 11) + ':' + str(
+                        (i['create_time'] & 2016) >> 5) + ':' + str(
+                        (i['create_time'] & 31) * 2)
+
+                    write_string = str(((i['write_date'] & 65024) >> 9) + 1980) + '/' + str(
+                        (i['write_date'] & 480) >> 5) + '/' + str(i['write_date'] & 31) + ' - ' + str(
+                        (i['write_time'] & 63488) >> 11) + ':' + str(
+                        (i['write_time'] & 2016) >> 5) + ':' + str(
+                        (i['write_time'] & 31) * 2)
+
+                    infoText = 'File Extension: ' + i['ext'] + '\nFile Signature: ' + i[
+                        'real_ext'] + '\ncreate: ' + create_string + '\nwrite: ' + write_string
+                    self.infoArea.setText(infoText)
                     self.generateView(self.read_FAT_DATA.get_content(self.read_cluster), self.read_cluster)
 
     def file_button_on_clicked(self, name):
@@ -295,9 +321,22 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
                 if 'del' in i:
                     print("it's delete")
                     i['real_ext']='Deleted File'
-                    extText = 'Directory Entry Extension: ' + i['ext'] + '\nFile Extension: ' + i['real_ext']
-                    self.extArea.setText(extText)
+                    create_string = str(((i['create_date'] & 65024) >> 9) + 1980) + '/' + str(
+                        (i['create_date'] & 480) >> 5) + '/' + str(i['create_date'] & 31) + ' - ' + str(
+                        (i['create_time'] & 63488) >> 11) + ':' + str(
+                        (i['create_time'] & 2016) >> 5) + ':' + str(
+                        (i['create_time'] & 31) * 2)
+
+                    write_string = str(((i['write_date'] & 65024) >> 9) + 1980) + '/' + str(
+                        (i['write_date'] & 480) >> 5) + '/' + str(i['write_date'] & 31) + ' - ' + str(
+                        (i['write_time'] & 63488) >> 11) + ':' + str(
+                        (i['write_time'] & 2016) >> 5) + ':' + str(
+                        (i['write_time'] & 31) * 2)
+
+                    infoText = 'File Extension: ' + i['ext'] + '\nFile Signature: ' + i['real_ext'] + '\ncreate: ' + create_string + '\nwrite: ' + write_string
+                    self.infoArea.setText(infoText)
                     break;
+
                 if 'size'==0 in i: #파일 목록에서 디렉토리일때
                     self.read_cluster = i['cluster']
                     if self.read_cluster == 0:
@@ -310,8 +349,21 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
                       self.read_cluster=2
                    # self.read_FAT_DATA.renew_list()
 
-                extText = 'Directory Entry Extension: ' + i['ext'] + '\nFile Extension: ' + i['real_ext']
-                self.extArea.setText(extText)
+                create_string = str(((i['create_date'] & 65024) >> 9) + 1980) + '/' + str(
+                    (i['create_date'] & 480) >> 5) + '/' + str(i['create_date'] & 31) + ' - ' + str(
+                    (i['create_time'] & 63488) >> 11) + ':' + str(
+                    (i['create_time'] & 2016) >> 5) + ':' + str(
+                    (i['create_time'] & 31) * 2)
+
+                write_string = str(((i['write_date'] & 65024) >> 9) + 1980) + '/' + str(
+                    (i['write_date'] & 480) >> 5) + '/' + str(i['write_date'] & 31) + ' - ' + str(
+                    (i['write_time'] & 63488) >> 11) + ':' + str(
+                    (i['write_time'] & 2016) >> 5) + ':' + str(
+                    (i['write_time'] & 31) * 2)
+
+                infoText = 'File Extension: ' + i['ext'] + '\nFile Signature: ' + i[
+                    'real_ext'] + '\ncreate: ' + create_string + '\nwrite: ' + write_string
+                self.infoArea.setText(infoText)
                 self.file_generateView(self.read_FAT_DATA.get_content(self.read_cluster), self.read_cluster)
 
     # highlightMain ... Bi-directional highlighting from main.
@@ -451,7 +503,7 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
         self.asciiTextArea = QTextEdit()  # ascii text 출력
         self.asciiImageArea = QPixmap()  # 이미지 파일의 경우 이미지 출력
         self.TextArea = QTextEdit()  # 문서파일의 경우 text 출력
-        self.extArea = QTextEdit() # directory entry에 저장된 확장자와 실제 파일의 확장자를 출력
+        self.infoArea = QTextEdit() # directory entry에 저장된 확장자와 실제 파일의 확장자를 출력
 
         self.Imagelb.setStyleSheet("background-color:black;")
         self.Imagescrollarea.setWidget(self.Imagelb)
@@ -463,19 +515,19 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
         self.asciiTextArea.setFont(font)
         self.offsetTextArea.setFont(font)
         self.TextArea.setFont(font)
-        self.extArea.setFont(font)
+        self.infoArea.setFont(font)
 
         self.tab.addTab(self.asciiTextArea, "ASCII")
         self.tab.addTab(self.TextArea, "TEXT")
         self.tab.addTab(self.Imagescrollarea, "IMAGE")
-        self.tab.addTab(self.extArea, "EXT")
+        self.tab.addTab(self.infoArea, "INFO")
 
         # Initialize them all to read only.
         self.mainTextArea.setReadOnly(True)
         self.asciiTextArea.setReadOnly(True)
         self.offsetTextArea.setReadOnly(True)
         self.TextArea.setReadOnly(True)
-        self.extArea.setReadOnly(True)
+        self.infoArea.setReadOnly(True)
 
         # Syncing scrolls.
         syncScrolls(self.mainTextArea, self.asciiTextArea, self.offsetTextArea, self.TextArea)

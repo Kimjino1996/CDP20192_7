@@ -95,7 +95,12 @@ class FAT32:
         if len(ext) > 0:
             name = name + "." + ext
 
+        create_time = struct.unpack_from("<H", data, 14)[0]
+        create_date = struct.unpack_from("<H", data, 16)[0]
+        lad = struct.unpack_from("<H", data, 18)[0] #last access date
         highcluster = struct.unpack_from("<H", data, 20)[0]
+        write_time = struct.unpack_from("<H", data, 22)[0]
+        write_date = struct.unpack_from("<H", data, 24)[0]
         lowcluster = struct.unpack_from("<H", data, 26)[0]
         cluster = highcluster << 16 | lowcluster
         size = struct.unpack_from("<I", data, 28)[0]
@@ -119,7 +124,8 @@ class FAT32:
         elif real_ext_byte == b'\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1':
             real_ext = 'HWP'
 
-        entry = {'sname': name, 'attr': attr, 'cluster': cluster, 'size': size, 'ext': ext, 'real_ext': real_ext}
+        entry = {'sname': name, 'attr': attr, 'cluster': cluster, 'size': size, 'ext': ext, 'real_ext': real_ext,
+                 'create_time': create_time, 'create_date': create_date, 'lad': lad, 'write_time': write_time, 'write_date': write_date }
 
 
         if len(lfn) > 0:
