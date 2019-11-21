@@ -110,7 +110,7 @@ class FAT32:
         real_ext=''
 
         if real_ext_high == b'PK\x03\x04':
-            real_ext = 'ZIP'
+            real_ext = 'ZIP/PPTX/XLSX/DOCX'
 
         elif real_ext_high == b'\xFF\xD8\xFF\xE0':
             real_ext = 'JPG'

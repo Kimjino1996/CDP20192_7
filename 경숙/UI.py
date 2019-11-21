@@ -92,6 +92,23 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
     def saveFile(self):
         print('Saved!')
 
+    def sizeAscFile(self):
+        print('size asc')
+
+    def sizeDesFile(self):
+        print('size des')
+
+    def createAscFile(self):
+        print('create asc')
+
+    def createDesFile(self):
+        print('create des')
+
+    def writeAscFile(self):
+        print('write asc')
+
+    def writeDesFile(self):
+        print('write des')
 
     # generateView ... Generates text view for hexdump likedness.
     def generateView(self, text,cluster):
@@ -570,24 +587,29 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
         viewMenu = mainMenu.addMenu('View')
         helpMenu = mainMenu.addMenu('Help')
 
+        fileMenu.setToolTipsVisible(True)
+        editMenu.setToolTipsVisible(True)
+        viewMenu.setToolTipsVisible(True)
+        helpMenu.setToolTipsVisible(True)
+
         # FILE MENU ---------------------------------------
 
         # Open button.
         openButton = QAction(QIcon(), 'Open', self)
         openButton.setShortcut('Ctrl+O')
-        openButton.setStatusTip('Open file')
+        openButton.setToolTip('Open file')
         openButton.triggered.connect(self.openFile)
 
         # Save button.
         saveButton = QAction(QIcon(), 'Save', self)
         saveButton.setShortcut('Ctrl+S')
-        saveButton.setStatusTip('Open file')
+        saveButton.setToolTip('Open file')
         saveButton.triggered.connect(self.saveFile)
 
         # Optional exit stuff.
         exitButton = QAction(QIcon(), 'Exit', self)
         exitButton.setShortcut('Ctrl+Q')
-        exitButton.setStatusTip('Exit application')
+        exitButton.setToolTip('Exit application')
         exitButton.triggered.connect(self.close)
 
         fileMenu.addAction(openButton)
@@ -599,10 +621,54 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
         # Jump to Offset
         offsetButton = QAction(QIcon(), 'Jump to Offset', self)
         offsetButton.setShortcut('Ctrl+J')
-        offsetButton.setStatusTip('Jump to Offset')
+        offsetButton.setToolTip('Jump to Offset')
         offsetButton.triggered.connect(self.offsetJump)
 
         editMenu.addAction(offsetButton)
+
+        # VIEW MENU ---------------------------------------
+
+        """openButton = QAction(QIcon(), 'Open', self)
+        openButton.setShortcut('Ctrl+O')
+        openButton.setStatusTip('Open file')
+        openButton.triggered.connect(self.openFile)"""
+
+        # Sort Files by Size in Ascending Order
+        sizeAscButton = QAction(QIcon(), 'size ↑', self)
+        sizeAscButton.setToolTip('Sort Files by Size in Ascending Order')
+        sizeAscButton.triggered.connect(self.sizeAscFile)
+
+        # Sort Files by Size in Descending Order
+        sizeDesButton = QAction(QIcon(), 'size ↓', self)
+        sizeDesButton.setToolTip('Sort Files by Size in Descending Order')
+        sizeDesButton.triggered.connect(self.sizeDesFile)
+
+        # Sort Files by Create Time in Ascending Order
+        createAscButton = QAction(QIcon(), 'Create ↑', self)
+        createAscButton.setToolTip('Sort Files by Create Time in Ascending Order')
+        createAscButton.triggered.connect(self.createAscFile)
+
+        # Sort Files by Create Time in Descending Order
+        createDesButton = QAction(QIcon(), 'Create ↓', self)
+        createDesButton.setToolTip('Sort Files by Create Time in Descending Order')
+        createDesButton.triggered.connect(self.createDesFile)
+
+        #Sort Files by Write Time in Ascending Order
+        writeAscButton = QAction(QIcon(), 'Write ↑', self)
+        writeAscButton.setToolTip('Sort Files by Write Time in Ascending Order')
+        writeAscButton.triggered.connect(self.writeAscFile)
+
+        # Sort Files by Write Time in Descending Order
+        writeDesButton = QAction(QIcon(), 'Write ↓', self)
+        writeDesButton.setToolTip('Sort Files by Write Time in Descending Order')
+        writeDesButton.triggered.connect(self.writeDesFile)
+
+        viewMenu.addAction(sizeAscButton)
+        viewMenu.addAction(sizeDesButton)
+        viewMenu.addAction(createAscButton)
+        viewMenu.addAction(createDesButton)
+        viewMenu.addAction(writeAscButton)
+        viewMenu.addAction(writeDesButton)
 
         # Creating a widget for the central widget thingy.
         centralWidget = QWidget()
