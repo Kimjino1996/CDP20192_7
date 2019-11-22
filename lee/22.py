@@ -92,7 +92,6 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
     def saveFile(self):
         print('Saved!')
 
-    #trash complete
     def sizeAscFile(self):
         self.size_asc_generateView(self.read_FAT_DATA.get_content(self.read_cluster), self.read_cluster)
 
@@ -305,7 +304,7 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
         self.button_list_area.setAlignment(Qt.AlignTop)
         self.file_button_list_area.setAlignment(Qt.AlignTop)
         self.Imagelb.setPixmap(self.asciiImageArea)
-    def size_des_generateView(self, text, cluster):
+    def write_des_generateView(self, text, cluster):
         self.read_FAT_DATA.renew_list()
         space = ' '
         rowSpacing = 4  # How many bytes before a double space.
@@ -333,8 +332,8 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
 
         print(self.read_FAT_DATA.dir_list)
         print(self.read_FAT_DATA.file_list)
-        self.read_FAT_DATA.dir_list.sort(key=itemgetter('write_time'),reverse=True)
-        self.read_FAT_DATA.file_list.sort(key=itemgetter('write_time'),reverse=True)
+        self.read_FAT_DATA.dir_list.sort(key=itemgetter('write_date','write_time'),reverse=True)
+        self.read_FAT_DATA.file_list.sort(key=itemgetter('write_date','write_time'),reverse=True)
 
         for i in self.read_FAT_DATA.dir_list:
             if 'name' in i:
@@ -430,106 +429,8 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
 
         print(self.read_FAT_DATA.dir_list)
         print(self.read_FAT_DATA.file_list)
-        self.read_FAT_DATA.dir_list.sort(key=itemgetter('write_time'))
-        self.read_FAT_DATA.file_list.sort(key=itemgetter('write_time'))
-
-        for i in self.read_FAT_DATA.dir_list:
-            if 'name' in i:
-                button_data.append(i['name'])
-
-            else:
-                button_data.append(i['sname'])
-
-        # print(button_data)
-        for i in self.read_FAT_DATA.file_list:
-            if 'name' in i:
-                file_button_data.append(i['name'])
-            else:
-                file_button_data.append(i['sname'])
-
-        for chars in range(1, len(text) + 1):
-            byte = text[chars - 1]
-            char = chr(text[chars - 1])
-
-            # Asciitext 는 오른쪽 출력부
-            if char is ' ':
-                asciiText += '.'
-
-            elif char is '\n':
-                asciiText += '!'
-
-            else:
-                asciiText += char
-            # main text 가 중앙에 있는것
-            mainText += format(byte, '02X')
-
-            if chars % rowLength is 0 and chars != 0:
-                offsetText += format(offset, '08x') + '\n'
-                offset += 16
-                mainText += '\n'
-                # asciiText += '\n'
-
-            elif chars % rowSpacing is 0:
-                mainText += space * 2
-
-            else:
-                mainText += space
-
-        for i in self.read_FAT_DATA.file_list:
-            if i['cluster'] == cluster:
-                byte_arr = QByteArray(text)
-                self.asciiImageArea.loadFromData(byte_arr, i['ext'])
-
-        self.offsetTextArea.setText(offsetText)
-        self.mainTextArea.setText(mainText)
-        self.asciiTextArea.setText(asciiText)
-
-        button_list_info = self.btn_list(button_data, 0)
-        file_button_list_info = self.btn_list(file_button_data, 1)
-
-        for i in range(len(button_list_info)):
-            self.button_list_area.addWidget(button_list_info[i])
-            button_list_info[i].clicked.connect(lambda state, a=i: self.button_on_clicked(button_data[a]))
-
-        for i in range(len(file_button_list_info)):
-            self.file_button_list_area.addWidget(file_button_list_info[i])
-            file_button_list_info[i].clicked.connect(
-                lambda state, a=i: self.file_button_on_clicked(file_button_data[a]))
-
-        self.button_list_area.setAlignment(Qt.AlignTop)
-        self.file_button_list_area.setAlignment(Qt.AlignTop)
-        self.Imagelb.setPixmap(self.asciiImageArea)
-
-    def write_des_generateView(self, text, cluster):
-        self.read_FAT_DATA.renew_list()
-        space = ' '
-        rowSpacing = 4  # How many bytes before a double space.
-        rowLength = 16  # 헥사 창에 얼마나 많은 byte 가 들어갈 것인지
-
-        if cluster == 0:
-            offset = 0
-
-        else:
-            offset = ((cluster - 2) * self.read_FAT_DATA.spc + self.read_FAT_DATA.first_data_sector) * 512
-
-        offsetText = ''
-        mainText = ''
-        asciiText = ''
-
-        for i in reversed(range(self.button_list_area.count())):
-            self.button_list_area.itemAt(i).widget().setParent(None)
-        for i in reversed(range(self.file_button_list_area.count())):
-            self.file_button_list_area.itemAt(i).widget().setParent(None)
-
-        self.read_FAT_DATA.get_files(self.read_cluster)
-
-        button_data = []
-        file_button_data = []
-
-        print(self.read_FAT_DATA.dir_list)
-        print(self.read_FAT_DATA.file_list)
-        self.read_FAT_DATA.dir_list.sort(key=itemgetter('write_time'),reverse=True)
-        self.read_FAT_DATA.file_list.sort(key=itemgetter('write_time'),reverse=True)
+        self.read_FAT_DATA.dir_list.sort(key=itemgetter('write_date','write_time'))
+        self.read_FAT_DATA.file_list.sort(key=itemgetter('write_date','write_time'))
 
         for i in self.read_FAT_DATA.dir_list:
             if 'name' in i:
@@ -625,8 +526,8 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
 
         print(self.read_FAT_DATA.dir_list)
         print(self.read_FAT_DATA.file_list)
-        self.read_FAT_DATA.dir_list.sort(key=itemgetter('create_time'),reverse=True)
-        self.read_FAT_DATA.file_list.sort(key=itemgetter('create_time'),reverse=True)
+        self.read_FAT_DATA.dir_list.sort(key=itemgetter('create_date','create_time'),reverse=True)
+        self.read_FAT_DATA.file_list.sort(key=itemgetter('create_date','create_time'),reverse=True)
 
         for i in self.read_FAT_DATA.dir_list:
             if 'name' in i:
@@ -722,8 +623,8 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
 
         print(self.read_FAT_DATA.dir_list)
         print(self.read_FAT_DATA.file_list)
-        self.read_FAT_DATA.dir_list.sort(key=itemgetter('create_time'))
-        self.read_FAT_DATA.file_list.sort(key=itemgetter('create_time'))
+        self.read_FAT_DATA.dir_list.sort(key=itemgetter('create_date','create_time'))
+        self.read_FAT_DATA.file_list.sort(key=itemgetter('create_date','create_time'))
 
         for i in self.read_FAT_DATA.dir_list:
             if 'name' in i:
