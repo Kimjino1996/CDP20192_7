@@ -245,22 +245,39 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
 
             else:
                 mainText += space
-        #print(mainText)
+
+        out = ''
+        byte_arr = QByteArray(text)
+
+        val = self.QByteArrayToString(byte_arr)
+        a = list(val.split(','))
+        for i in range(len(a)):
+            # print(chr(int(a[i])))
+            if int(a[i]) != 0:
+                out += chr(int(a[i]))
 
         for i in self.read_FAT_DATA.file_list:
             if i['cluster'] == cluster:
                 byte_arr = QByteArray(text)
                 self.asciiImageArea.loadFromData(byte_arr, i['ext'])
 
-        #print(text.decode('utf-8'))
 
         self.offsetTextArea.setText(offsetText)
         self.mainTextArea.setText(mainText)
         self.asciiTextArea.setText(asciiText)
+        self.TextArea.setText(out)
 
         self.button_list_area.setAlignment(Qt.AlignTop)
         self.file_button_list_area.setAlignment(Qt.AlignTop)
         self.Imagelb.setPixmap(self.asciiImageArea)
+
+    def QByteArrayToString(self, _val):
+        out_str = ''
+        for i in range(_val.count()):
+            out_str += str(ord(_val[i]))
+            if i < _val.count() - 1:
+                out_str += ','
+        return out_str
 
     def btn_list(self, name, type):
         btnList = []
@@ -306,9 +323,11 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
                                            (i['write_time'] & 31) * 2)
 
                     infoText = 'File Extension: ' + i['ext'] + '\nFile Signature: ' + i[
-                        'real_ext'] + '\ncreate: ' + create_string + '\nwrite: ' + write_string
+                        'real_ext'] + '\nSize: ' + str(
+                        i['size']) + '\ncreate: ' + create_string + '\nwrite: ' + write_string
                     self.infoArea.setText(infoText)
                     break;
+
                 else:
                     self.read_cluster=i['cluster']
                     if self.read_cluster == 0:
@@ -328,7 +347,8 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
                         (i['write_time'] & 31) * 2)
 
                     infoText = 'File Extension: ' + i['ext'] + '\nFile Signature: ' + i[
-                        'real_ext'] + '\ncreate: ' + create_string + '\nwrite: ' + write_string
+                        'real_ext'] + '\nSize: ' + str(
+                        i['size']) + '\ncreate: ' + create_string + '\nwrite: ' + write_string
                     self.infoArea.setText(infoText)
                     self.generateView(self.read_FAT_DATA.get_content(self.read_cluster), self.read_cluster)
 
@@ -350,7 +370,9 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
                         (i['write_time'] & 2016) >> 5) + ':' + str(
                         (i['write_time'] & 31) * 2)
 
-                    infoText = 'File Extension: ' + i['ext'] + '\nFile Signature: ' + i['real_ext'] + '\ncreate: ' + create_string + '\nwrite: ' + write_string
+                    infoText = 'File Extension: ' + i['ext'] + '\nFile Signature: ' + i[
+                        'real_ext'] + '\nSize: ' + str(
+                        i['size']) + '\ncreate: ' + create_string + '\nwrite: ' + write_string
                     self.infoArea.setText(infoText)
                     break;
 
@@ -379,7 +401,7 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
                     (i['write_time'] & 31) * 2)
 
                 infoText = 'File Extension: ' + i['ext'] + '\nFile Signature: ' + i[
-                    'real_ext'] + '\ncreate: ' + create_string + '\nwrite: ' + write_string
+                    'real_ext'] + '\nSize: ' + str(i['size']) + '\ncreate: ' + create_string + '\nwrite: ' + write_string
                 self.infoArea.setText(infoText)
                 self.file_generateView(self.read_FAT_DATA.get_content(self.read_cluster), self.read_cluster)
 
