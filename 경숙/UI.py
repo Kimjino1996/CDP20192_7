@@ -550,8 +550,10 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
 
         if jumpText != '':
             jumpOffset = int(int(jumpText) / 512)
+            jumpCluster = int((jumpOffset-self.read_FAT_DATA.first_data_sector)/self.read_FAT_DATA.spc+2)
             print(jumpOffset)
-            self.generateView(self.read_FAT_DATA.read_sector(jumpOffset), jumpOffset)
+            print(jumpCluster)
+            self.generateView(self.read_FAT_DATA.read_sector(jumpOffset), jumpCluster)
 
 
     # createMainView ... Creates the primary view and look of the application (3-text areas.)
