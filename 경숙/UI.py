@@ -3,6 +3,7 @@ import sys, os, enum
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
+from operator import itemgetter
 
 import fat32Test
 
@@ -86,6 +87,7 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
     def readFile(self, fileName):
         self.read_FAT_DATA = fat32Test.FAT32(fileName)
         self.read_cluster = self.read_FAT_DATA.root_cluster
+        self.read_FAT_DATA.get_files(self.read_cluster)
         self.generateView(self.read_FAT_DATA.read_sector(0, 32), 0) # 처음 시작했을 때는 vbr 영역만큼(32 sector) 읽는다
 
 
@@ -94,25 +96,56 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
 
     def sizeAscFile(self):
         print('size asc')
+        self.read_FAT_DATA.renew_list()
+        self.read_FAT_DATA.get_files(self.read_cluster)
+        self.read_FAT_DATA.dir_list.sort(key=itemgetter('size'))
+        self.read_FAT_DATA.file_list.sort(key=itemgetter('size'))
+        self.generateView(self.read_FAT_DATA.get_content(self.read_cluster), self.read_cluster)
 
     def sizeDesFile(self):
         print('size des')
+        self.read_FAT_DATA.renew_list()
+        self.read_FAT_DATA.get_files(self.read_cluster)
+        self.read_FAT_DATA.dir_list.sort(key=itemgetter('size'), reverse=True)
+        self.read_FAT_DATA.file_list.sort(key=itemgetter('size'), reverse=True)
+        print(self.read_FAT_DATA.file_list)
+        self.generateView(self.read_FAT_DATA.get_content(self.read_cluster), self.read_cluster)
 
     def createAscFile(self):
         print('create asc')
+        self.read_FAT_DATA.renew_list()
+        self.read_FAT_DATA.get_files(self.read_cluster)
+        self.read_FAT_DATA.dir_list.sort(key=itemgetter('create_date', 'create_time'))
+        self.read_FAT_DATA.file_list.sort(key=itemgetter('create_date', 'create_time'))
+        self.generateView(self.read_FAT_DATA.get_content(self.read_cluster), self.read_cluster)
 
     def createDesFile(self):
         print('create des')
+        self.read_FAT_DATA.renew_list()
+        self.read_FAT_DATA.get_files(self.read_cluster)
+        self.read_FAT_DATA.dir_list.sort(key=itemgetter('create_date', 'create_time'), reverse=True)
+        self.read_FAT_DATA.file_list.sort(key=itemgetter('create_date', 'create_time'), reverse=True)
+        self.generateView(self.read_FAT_DATA.get_content(self.read_cluster), self.read_cluster)
 
     def writeAscFile(self):
         print('write asc')
+        self.read_FAT_DATA.renew_list()
+        self.read_FAT_DATA.get_files(self.read_cluster)
+        self.read_FAT_DATA.dir_list.sort(key=itemgetter('write_date', 'write_time'))
+        self.read_FAT_DATA.file_list.sort(key=itemgetter('write_date', 'write_time'))
+        self.generateView(self.read_FAT_DATA.get_content(self.read_cluster), self.read_cluster)
 
     def writeDesFile(self):
         print('write des')
+        self.read_FAT_DATA.renew_list()
+        self.read_FAT_DATA.get_files(self.read_cluster)
+        self.read_FAT_DATA.dir_list.sort(key=itemgetter('write_date', 'write_time'), reverse=True)
+        self.read_FAT_DATA.file_list.sort(key=itemgetter('write_date', 'write_time'), reverse=True)
+        self.generateView(self.read_FAT_DATA.get_content(self.read_cluster), self.read_cluster)
 
     # generateView ... Generates text view for hexdump likedness.
     def generateView(self, text,cluster):
-        self.read_FAT_DATA.renew_list()
+
         space = ' '
         rowSpacing = 4  # How many bytes before a double space.
         rowLength = 16  # 헥사 창에 얼마나 많은 byte 가 들어갈 것인지
@@ -132,13 +165,8 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
         for i in reversed(range(self.file_button_list_area.count())):
             self.file_button_list_area.itemAt(i).widget().setParent(None)
 
-        self.read_FAT_DATA.get_files(self.read_cluster)
-
         button_data = []
         file_button_data = []
-
-        print(self.read_FAT_DATA.dir_list)
-        print(self.read_FAT_DATA.file_list)
 
         for i in self.read_FAT_DATA.dir_list:
             if 'name' in i:
@@ -182,6 +210,15 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
             else:
                 mainText += space
 
+        out = ''
+        byte_arr = QByteArray(text)
+
+        val = self.QByteArrayToString(byte_arr)
+        a = list(val.split(','))
+        for i in range(len(a)):
+            if int(a[i]) != 0:
+                out += chr(int(a[i]))
+
         for i in self.read_FAT_DATA.file_list:
             if i['cluster'] == cluster:
                 byte_arr = QByteArray(text)
@@ -190,6 +227,7 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
         self.offsetTextArea.setText(offsetText)
         self.mainTextArea.setText(mainText)
         self.asciiTextArea.setText(asciiText)
+        self.TextArea.setText(out)
 
 
         button_list_info = self.btn_list(button_data, 0)
@@ -252,7 +290,6 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
         val = self.QByteArrayToString(byte_arr)
         a = list(val.split(','))
         for i in range(len(a)):
-            # print(chr(int(a[i])))
             if int(a[i]) != 0:
                 out += chr(int(a[i]))
 
@@ -260,7 +297,6 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
             if i['cluster'] == cluster:
                 byte_arr = QByteArray(text)
                 self.asciiImageArea.loadFromData(byte_arr, i['ext'])
-
 
         self.offsetTextArea.setText(offsetText)
         self.mainTextArea.setText(mainText)
@@ -270,6 +306,7 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
         self.button_list_area.setAlignment(Qt.AlignTop)
         self.file_button_list_area.setAlignment(Qt.AlignTop)
         self.Imagelb.setPixmap(self.asciiImageArea)
+
 
     def QByteArrayToString(self, _val):
         out_str = ''
@@ -325,6 +362,9 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
                     infoText = 'File Extension: ' + i['ext'] + '\nFile Signature: ' + i[
                         'real_ext'] + '\nSize: ' + str(
                         i['size']) + '\ncreate: ' + create_string + '\nwrite: ' + write_string
+
+                    self.asciiTextArea.setText('Deleted Directory')
+                    self.TextArea.setText('')
                     self.infoArea.setText(infoText)
                     break;
 
@@ -350,6 +390,8 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
                         'real_ext'] + '\nSize: ' + str(
                         i['size']) + '\ncreate: ' + create_string + '\nwrite: ' + write_string
                     self.infoArea.setText(infoText)
+                    self.read_FAT_DATA.renew_list()
+                    self.read_FAT_DATA.get_files(self.read_cluster)
                     self.generateView(self.read_FAT_DATA.get_content(self.read_cluster), self.read_cluster)
 
     def file_button_on_clicked(self, name):
@@ -373,6 +415,9 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
                     infoText = 'File Extension: ' + i['ext'] + '\nFile Signature: ' + i[
                         'real_ext'] + '\nSize: ' + str(
                         i['size']) + '\ncreate: ' + create_string + '\nwrite: ' + write_string
+
+                    self.asciiTextArea.setText('Deleted File')
+                    self.TextArea.setText('')
                     self.infoArea.setText(infoText)
                     break;
 
@@ -383,7 +428,7 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
                     # self.read_FAT_DATA.renew_list()
 
                 else:
-                    self.read_cluster=i['cluster']
+                    #self.read_cluster=i['cluster']
                     if self.read_cluster == 0:
                       self.read_cluster=2
                    # self.read_FAT_DATA.renew_list()
@@ -403,7 +448,7 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
                 infoText = 'File Extension: ' + i['ext'] + '\nFile Signature: ' + i[
                     'real_ext'] + '\nSize: ' + str(i['size']) + '\ncreate: ' + create_string + '\nwrite: ' + write_string
                 self.infoArea.setText(infoText)
-                self.file_generateView(self.read_FAT_DATA.get_content(self.read_cluster), self.read_cluster)
+                self.file_generateView(self.read_FAT_DATA.get_content(i['cluster']), i['cluster'])
 
     # highlightMain ... Bi-directional highlighting from main.
     def highlightMain(self):
