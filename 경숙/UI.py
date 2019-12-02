@@ -23,7 +23,7 @@ class FileSelector(QFileDialog):  # FILE 입출력부
     def selectFile(self):  # FILE 선택창 설정
         options = QFileDialog.Options()  # 이 속성은 대화 상자의 모양과 느낌에 영향을 미치는 다양한 옵션을 보유함
         options != QFileDialog.DontUseNativeDialog
-        fileName, _ = QFileDialog.getOpenFileName(self, "Choose Contact Icon", "", "All Files(*))", options=options) #fileName에 open한 file name 받아서 저장하고 그 외에 return값은 무시
+        fileName, _ = QFileDialog.getOpenFileName(self, "Open File", "", "All Files(*))", options=options) #fileName에 open한 file name 받아서 저장하고 그 외에 return값은 무시
         # 사용자가 선택한 기존 파일을 반환하는 편의 정적 기능이다. 사용자가 취소를 누르면 null 문자열이 반환된다.
         # 윈도우즈 및 macOS에서 이 정적 기능은 QFileDialog가 아닌 기본 파일 대화 상자를 사용한다.
         # 1. 어느 위젯에 띄울지결정 하는포인터인것 같고, 다이어로그창 이름, 작업하려는 dir 시작점, 필터 (ex / All dir 로 걸면 dir 만 보임), option 인데
@@ -87,6 +87,7 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
     def readFile(self, fileName):
         self.read_FAT_DATA = fat32Test.FAT32(fileName)
         self.read_cluster = self.read_FAT_DATA.root_cluster
+
         self.read_FAT_DATA.get_files(self.read_cluster)
         self.generateView(self.read_FAT_DATA.read_sector(0, 32), 0) # 처음 시작했을 때는 vbr 영역만큼(32 sector) 읽는다
 
@@ -221,8 +222,9 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
 
         for i in self.read_FAT_DATA.file_list:
             if i['cluster'] == cluster:
-                byte_arr = QByteArray(text)
+                #byte_arr = QByteArray(text)
                 self.asciiImageArea.loadFromData(byte_arr, i['ext'])
+
 
         self.offsetTextArea.setText(offsetText)
         self.mainTextArea.setText(mainText)
@@ -288,6 +290,7 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
         byte_arr = QByteArray(text)
 
         val = self.QByteArrayToString(byte_arr)
+
         a = list(val.split(','))
         for i in range(len(a)):
             if int(a[i]) != 0:
@@ -295,7 +298,6 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
 
         for i in self.read_FAT_DATA.file_list:
             if i['cluster'] == cluster:
-                byte_arr = QByteArray(text)
                 self.asciiImageArea.loadFromData(byte_arr, i['ext'])
 
         self.offsetTextArea.setText(offsetText)
@@ -365,6 +367,8 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
 
                     self.asciiTextArea.setText('Deleted Directory')
                     self.TextArea.setText('')
+                    self.asciiImageArea.loadFromData(QByteArray(b''), i['ext'])
+                    self.Imagelb.setPixmap(self.asciiImageArea)
                     self.infoArea.setText(infoText)
                     break;
 
@@ -390,6 +394,8 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
                         'real_ext'] + '\nSize: ' + str(
                         i['size']) + '\ncreate: ' + create_string + '\nwrite: ' + write_string
                     self.infoArea.setText(infoText)
+                    self.asciiImageArea.loadFromData(QByteArray(b''), i['ext'])
+                    self.Imagelb.setPixmap(self.asciiImageArea)
                     self.read_FAT_DATA.renew_list()
                     self.read_FAT_DATA.get_files(self.read_cluster)
                     self.generateView(self.read_FAT_DATA.get_content(self.read_cluster), self.read_cluster)
@@ -418,6 +424,8 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
 
                     self.asciiTextArea.setText('Deleted File')
                     self.TextArea.setText('')
+                    self.asciiImageArea.loadFromData(QByteArray(b''), i['ext'])
+                    self.Imagelb.setPixmap(self.asciiImageArea)
                     self.infoArea.setText(infoText)
                     break;
 
@@ -550,7 +558,11 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
 
         if jumpText != '':
             jumpOffset = int(int(jumpText) / 512)
-            jumpCluster = int((jumpOffset-self.read_FAT_DATA.first_data_sector)/self.read_FAT_DATA.spc+2)
+            if jumpOffset == 0 :
+                jumpCluster = 0
+
+            else :
+                jumpCluster = int((jumpOffset-self.read_FAT_DATA.first_data_sector)/self.read_FAT_DATA.spc+2)
             print(jumpOffset)
             print(jumpCluster)
             self.generateView(self.read_FAT_DATA.read_sector(jumpOffset), jumpCluster)
