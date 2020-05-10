@@ -6,6 +6,7 @@ from PyQt5.QtCore import *
 from operator import itemgetter
 
 import fat32Test
+import binascii
 
 class Mode(enum.Enum):
     READ = 0  # Purely read the hex.
@@ -144,8 +145,24 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
         self.read_FAT_DATA.file_list.sort(key=itemgetter('write_date', 'write_time'), reverse=True)
         self.generateView(self.read_FAT_DATA.get_content(self.read_cluster), self.read_cluster)
 
+    def ladAscFile(self):
+        print('lad asc')
+        self.read_FAT_DATA.renew_list()
+        self.read_FAT_DATA.get_files(self.read_cluster)
+        self.read_FAT_DATA.dir_list.sort(key=itemgetter('lad'))
+        self.read_FAT_DATA.file_list.sort(key=itemgetter('lad'))
+        self.generateView(self.read_FAT_DATA.get_content(self.read_cluster), self.read_cluster)
+
+    def ladDesFile(self):
+        print('lad des')
+        self.read_FAT_DATA.renew_list()
+        self.read_FAT_DATA.get_files(self.read_cluster)
+        self.read_FAT_DATA.dir_list.sort(key=itemgetter('lad'), reverse=True)
+        self.read_FAT_DATA.file_list.sort(key=itemgetter('lad'), reverse=True)
+        self.generateView(self.read_FAT_DATA.get_content(self.read_cluster), self.read_cluster)
+
     # generateView ... Generates text view for hexdump likedness.
-    def generateView(self, text,cluster):
+    def generateView(self, text, cluster):
 
         space = ' '
         rowSpacing = 4  # How many bytes before a double space.
@@ -744,12 +761,24 @@ class App(QMainWindow, QWidget):  # 창의 대부분의 기능
         writeDesButton.setToolTip('Sort Files by Write Time in Descending Order')
         writeDesButton.triggered.connect(self.writeDesFile)
 
+        #Sort Files by Last Access Date in Ascending Order
+        ladAscButton = QAction(QIcon(), 'Last Access ↑', self)
+        ladAscButton.setToolTip('Sort Files by Last Access Date in Ascending Order')
+        ladAscButton.triggered.connect(self.ladAscFile)
+
+        # Sort Files by Last Access Date in Descending Order
+        ladDesButton = QAction(QIcon(), 'Last Access ↓', self)
+        ladDesButton.setToolTip('Sort Files by Last Access Date in Descending Order')
+        ladDesButton.triggered.connect(self.ladDesFile)
+
         viewMenu.addAction(sizeAscButton)
         viewMenu.addAction(sizeDesButton)
         viewMenu.addAction(createAscButton)
         viewMenu.addAction(createDesButton)
         viewMenu.addAction(writeAscButton)
         viewMenu.addAction(writeDesButton)
+        viewMenu.addAction(ladAscButton)
+        viewMenu.addAction(ladDesButton)
 
         # Creating a widget for the central widget thingy.
         centralWidget = QWidget()
